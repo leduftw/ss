@@ -9,11 +9,9 @@ using namespace std;
 class Assembler {
 public:
 
-    bool first_pass();
+    virtual ~Assembler() { }
 
-    bool second_pass();
-
-    bool assemble(string input_file_name, string output_file_name);
+    virtual bool assemble(string input_file_name, string output_file_name) = 0;
 
 };
 

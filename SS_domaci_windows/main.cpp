@@ -2,7 +2,7 @@
 #include <memory>
 
 #include "utils.h"
-#include "assembler.hpp"
+#include "two_pass_assembler.hpp"
 
 using namespace std;
 
@@ -21,8 +21,12 @@ int main(int argc, char **argv) {
         output_file_name = Utils::get_file_name_without_extension(input_file_name) + ".o";
     }
 
-    auto assembler = make_unique<Assembler>();
-    assembler->assemble(input_file_name, output_file_name);
+    unique_ptr<Assembler> assembler = make_unique<TwoPassAssembler>();
+    bool status = assembler->assemble(input_file_name, output_file_name);
+
+    if (!status) {
+        cout << "\nAssembling finished with errors.\n";
+    }
 
     return 0;
 }
