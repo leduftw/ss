@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 
 void usage_error() {
     cerr << "Usage: asembler [options] <input_file_name>\n";
-    cerr << "Options: -o <file>     Place the output into <file>.\n";
+    cerr << "Options: -o <file>" << "\t\t" << "Place the output into <file>.\n";
 }
 
 bool process_input(int argc, char **argv, string &input_file_name, string &output_file_name) {
