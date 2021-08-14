@@ -21,19 +21,19 @@ int main(int argc, char **argv) {
         output_file_name = Utils::get_file_name_without_extension(input_file_name) + ".o";
     }
 
-    unique_ptr<Assembler> assembler = make_unique<TwoPassAssembler>();
+    auto assembler = make_unique<TwoPassAssembler>();
     bool status = assembler->assemble(input_file_name, output_file_name);
 
     if (!status) {
-        cout << "\nAssembling finished with errors.\n";
+        cerr << "\nAssembling finished with errors.\n";
     }
 
     return 0;
 }
 
 void usage_error() {
-    cout << "Usage: asembler [options] <input_file_name>\n";
-    cout << "Options: -o <file>     Place the output into <file>.\n";
+    cerr << "Usage: asembler [options] <input_file_name>\n";
+    cerr << "Options: -o <file>     Place the output into <file>.\n";
 }
 
 bool process_input(int argc, char **argv, string &input_file_name, string &output_file_name) {
