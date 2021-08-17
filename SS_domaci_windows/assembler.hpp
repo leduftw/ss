@@ -17,15 +17,13 @@ protected:
     ifstream input_file;
     ofstream output_file;
 
-    SymbolTable symbol_table;
-
-    virtual Instruction get_next_instruction() = 0;
+    SymbolTable* symbol_table = nullptr;
 
 public:
 
     virtual ~Assembler() { }
 
-    virtual bool assemble(string input_file_name, string output_file_name) = 0;
+    virtual void assemble(string input_file_name, string output_file_name) = 0;
 
 };
 

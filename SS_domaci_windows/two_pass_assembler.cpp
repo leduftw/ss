@@ -1,97 +1,121 @@
 #include "two_pass_assembler.hpp"
-#include "directive.hpp"
+#include "file_error.hpp"
+#include "syntax_error.hpp"
 
-Instruction TwoPassAssembler::get_next_instruction() {
+#include "LineParser.h"
 
+void TwoPassAssembler::erase() {
+    for (Instruction* instruction : instructions) {
+        delete instruction;
+    }
+
+    instructions.clear();
+    buffer.clear();
+
+    delete parser;
 }
 
-bool TwoPassAssembler::first_pass() {
+void TwoPassAssembler::first_pass() {
     cout << "First pass...\n";
-    bool status = true;
 
     int current_section = -1;
     size_t location_counter = 0;
-    Instruction instruction = get_next_instruction();
-    while (instruction.get_operation() != ".end") {
-        if (instruction.has_label()) {
-            string label = instruction.get_label();
-            if (symbol_table.contains(label)) {
-                cerr << "Symbol '" + label + "' is already declared.\n";
-                status = false;
-            } else {
-                SymbolTable::SymbolInfo symbol_info;
-                symbol_info.value = location_counter;
-                symbol_info.section = current_section;
-                symbol_info.is_defined = true;
-                symbol_info.is_global = false;
-                symbol_info.entry_number = ++symbol_table.last_entry;
+    Instruction* next_instruction = parser->get_next_instruction();
 
-                symbol_table.insert(label, symbol_info);
+    /*
+    string line;
+    getline(input_file, line);
+    Instruction *next_instruction = LineParser::parse(line);
+    */
+
+    instructions.push_back(next_instruction);
+
+    while (true) {
+        if (next_instruction->is_directive() && next_instruction->get_directive_name() == "end") {
+            break;
+        }
+
+        if (next_instruction->has_label()) {
+            /* TODO */
+            string label = next_instruction->get_labels()[0];
+            if (symbol_table->contains(label)) {
+                /* TODO */
+                cerr << "Symbol '" + label + "' is already declared.\n";
+            } else {
+                /* TODO */
+                SymbolTable::SymbolInfo* symbol_info = new SymbolTable::SymbolInfo();
+                symbol_info->value = location_counter;
+                symbol_info->section = current_section;
+                symbol_info->is_defined = true;
+                symbol_info->is_global = false;
+                symbol_info->entry_number = ++symbol_table->last_entry;
+
+                symbol_table->insert(label, symbol_info);
             }
         }
 
-        location_counter += instruction.size();
-        instruction = get_next_instruction();
+        location_counter += next_instruction->size();
+
+        while (!(next_instruction = parser->get_next_instruction()));
+
+        /*
+        string line;
+        getline(input_file, line);
+        Instruction *next_instruction = LineParser::parse(line);
+        */
+
+        instructions.push_back(next_instruction);
     }
 
     buffer = vector<char>(location_counter);
-
-    return status;
 }
 
-bool TwoPassAssembler::second_pass() {
+void TwoPassAssembler::second_pass() {
     cout << "Second pass...\n";
-    bool status = true;
 
+    /*
     // Return to the beginning of the input file
     input_file.seekg(0);
+    */
 
     size_t location_counter = 0;
-    Instruction instruction = get_next_instruction();
-    while (instruction.get_operation() != ".end") {
-        if (instruction.has_label()) {
-            string label = instruction.get_label();
-            if (symbol_table.contains(label)) {
-                cerr << "Symbol '" + label + "' is already declared.\n";
-                status = false;
-            } else {
-                symbol_table.insert(label, location_counter);
-            }
-        }
+    for (Instruction* next_instruction : instructions) {
+        /* TODO */
 
-        location_counter += instruction.size();
-        instruction = get_next_instruction();
+        location_counter += next_instruction->size();
     }
-
-
-    return status;
 }
 
-bool TwoPassAssembler::assemble(string input_file_name, string output_file_name) {
+void TwoPassAssembler::assemble(string input_file_name, string output_file_name) {
     cout << "Assembling " + input_file_name + " in two passes.\n";
 
     input_file.open(input_file_name, ios::in);
     if (!input_file.is_open()) {
         cerr << "Unable to open file " + input_file_name + ".\n";
-        return false;
+        throw FileError(input_file_name);
     }
+
+    parser = new Parser(input_file);
+
+    symbol_table = new SymbolTable();
+
+    first_pass();
+
+    input_file.close();
 
     output_file.open(output_file_name, ios::out | ios::trunc);
     if (!output_file.is_open()) {
         cerr << "Unable to open file " + output_file_name + ".\n";
-        return false;
+        throw FileError(output_file_name);
     }
-
-    first_pass();
 
     second_pass();
 
     output_file << symbol_table << "\n";
 
-    input_file.close();
     output_file.close();
 
-    cout << "Assembling finished. Created object file " + output_file_name + "\n";
+    erase();
 
-    return false;
+    cout << "Assembling finished. Created object file " + output_file_name + "\n";
 }

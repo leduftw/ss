@@ -1,49 +1,44 @@
 #include <iostream>
 #include <memory>
 
-#include "utils.h"
 #include "two_pass_assembler.hpp"
+#include "utils.h"
+#include "usage_error.hpp"
+#include "syntax_error.hpp"
 
 using namespace std;
 
-void usage_error();
-bool process_input(int argc, char **argv, string &input_file_name, string &output_file_name);
+void process_input(int argc, char** argv, string& input_file_name, string& output_file_name);
 
-int main(int argc, char **argv) {
-    string input_file_name = "", output_file_name = "";
+int main(int argc, char** argv) {
+    try {
+        string input_file_name = "", output_file_name = "";
+        process_input(argc, argv, input_file_name, output_file_name);
+        if (output_file_name == "") {
+            output_file_name = Utils::get_file_name_without_extension(input_file_name) + ".o.txt";
+        }
 
-    if (!process_input(argc, argv, input_file_name, output_file_name)) {
-        usage_error();
-        return 1;
-    }
+        // RAII
+        //unique_ptr<Assembler> assembler = make_unique<TwoPassAssembler>();
+        Assembler* assembler = new TwoPassAssembler();
+        assembler->assemble(input_file_name, output_file_name);
+        delete assembler;
 
-    if (output_file_name == "") {
-        output_file_name = Utils::get_file_name_without_extension(input_file_name) + ".o";
-    }
-
-    auto assembler = make_unique<TwoPassAssembler>();
-    bool status = assembler->assemble(input_file_name, output_file_name);
-
-    if (!status) {
-        cerr << "\nAssembling finished with errors.\n";
+    } catch (exception& e) {
+        cerr << e.what() << "\n";
     }
 
     return 0;
 }
 
-void usage_error() {
-    cerr << "Usage: asembler [options] <input_file_name>\n";
-    cerr << "Options: -o <file>" << "\t\t" << "Place the output into <file>.\n";
-}
-
-bool process_input(int argc, char **argv, string &input_file_name, string &output_file_name) {
+void process_input(int argc, char** argv, string& input_file_name, string& output_file_name) {
     if (argc < 2 || argc > 4) {
-        return false;
+        throw UsageError();
     }
 
     if (string(argv[1]) == "-o") {
         if (argc != 4) {
-            return false;
+            throw UsageError();
         }
 
         output_file_name = string(argv[2]);
@@ -51,9 +46,11 @@ bool process_input(int argc, char **argv, string &input_file_name, string &outpu
 
     } else {
         if (argc != 2) {
-            return false;
+            throw UsageError();
         }
 
         input_file_name = string(argv[1]);
     }
+
+    input_file_name = "./test/" + input_file_name;
 }

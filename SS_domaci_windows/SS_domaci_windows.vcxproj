@@ -139,13 +139,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="instruction.cpp" />
+    <ClCompile Include="LineParser.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="parser.cpp" />
+    <ClCompile Include="section.cpp" />
+    <ClCompile Include="symbol_table.cpp" />
     <ClCompile Include="two_pass_assembler.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="assembler.hpp" />
+    <ClInclude Include="file_error.hpp" />
+    <ClInclude Include="instruction.hpp" />
+    <ClInclude Include="LineParser.h" />
+    <ClInclude Include="parser.hpp" />
+    <ClInclude Include="section.hpp" />
+    <ClInclude Include="symbol_table.hpp" />
+    <ClInclude Include="syntax_error.hpp" />
     <ClInclude Include="two_pass_assembler.hpp" />
+    <ClInclude Include="usage_error.hpp" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

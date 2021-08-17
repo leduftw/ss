@@ -19,21 +19,27 @@ class SymbolTable {
     };
 
     size_t last_entry = 0;
-    unordered_map<string, SymbolInfo> symbols;
+    unordered_map<string, SymbolInfo*> symbols;
+
+    void erase();
 
 public:
 
     friend class TwoPassAssembler;
 
+    friend ostream& operator<<(ostream& os, const SymbolTable& symbol_table);
+
+    ~SymbolTable() {
+        erase();
+    }
+
     bool contains(string symbol) const {
         return symbols.find(symbol) != symbols.end();
     }
 
-    void insert(string symbol, SymbolInfo symbol_info) {
+    void insert(string symbol, SymbolInfo* symbol_info) {
         symbols[symbol] = symbol_info;
     }
-
-    friend ostream &operator<<(ostream &os, const SymbolTable &symbol_table);
 };
 
 #endif
