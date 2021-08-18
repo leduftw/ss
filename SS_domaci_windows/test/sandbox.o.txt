@@ -1,0 +1,5 @@
+============================ SYMBOL TABLE ============================
+Name	Value	Section	Global	Entry
+text	0		text	0		1
+abc		0		abc		0		2
+

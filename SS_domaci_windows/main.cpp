@@ -19,10 +19,8 @@ int main(int argc, char** argv) {
         }
 
         // RAII
-        //unique_ptr<Assembler> assembler = make_unique<TwoPassAssembler>();
-        Assembler* assembler = new TwoPassAssembler();
+        unique_ptr<Assembler> assembler = make_unique<TwoPassAssembler>();
         assembler->assemble(input_file_name, output_file_name);
-        delete assembler;
 
     } catch (exception& e) {
         cerr << e.what() << "\n";

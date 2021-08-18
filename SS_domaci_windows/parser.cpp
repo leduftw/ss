@@ -12,7 +12,7 @@ Parser::Parser(ifstream& in_file) : input_file(in_file) {
     */
     string label_regex = "\\s*(?:([A-Za-z0-9_\\.][A-Za-z0-9_]*)\\s*:\\s*)?";
 
-    // Command, e.g. "cmp".
+    // Command name, e.g. "cmp".
     string command_regex = "([A-Za-z]+)";
 
     /*
@@ -23,7 +23,7 @@ Parser::Parser(ifstream& in_file) : input_file(in_file) {
             3) $a
             4) 123
             5) %b
-            6) [r1 + 123]
+            6) *[r1 + 123]
             7) *r6
     */
     string operand_regex = "([^,#]+)\\s*";
@@ -53,8 +53,15 @@ Parser::Parser(ifstream& in_file) : input_file(in_file) {
     directive_regex = regex(label_regex + directive_name_regex + "(?:\\s+" + directive_arg_regex + "\\s*(?:,\\s*" + "([^#]*)" + "\\s*)*)*" + comment_regex);
 }
 
-Instruction* Parser::get_next_instruction() {
-    Instruction* instruction = new Instruction();
+shared_ptr<Instruction> Parser::get_next_instruction() {
+    shared_ptr<Instruction> instruction = build_instruction();
+    check_syntax(instruction);
+
+    return instruction;
+}
+
+shared_ptr<Instruction> Parser::build_instruction() {
+    auto instruction = make_shared<Instruction>();
     while (true) {
         string line;
         if (!getline(input_file, line)) {
@@ -91,7 +98,6 @@ Instruction* Parser::get_next_instruction() {
             }
         }
 
-        
         instruction->set_line(cur_line);
         if (sm[1].matched) {
             instruction->get_labels().push_back(sm[1]);
@@ -135,4 +141,8 @@ Instruction* Parser::get_next_instruction() {
     }
 
     return instruction;
+}
+
+void Parser::check_syntax(shared_ptr<Instruction> instruction) {
+
 }

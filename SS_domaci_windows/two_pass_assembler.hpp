@@ -2,21 +2,26 @@
 #define TWO_PASS_ASSEMBLER_H
 
 #include <vector>
+#include <memory>
 
 #include "assembler.hpp"
 #include "parser.hpp"
+#include "section.hpp"
 
 using namespace std;
 
 class TwoPassAssembler : public Assembler {
 
-    Parser* parser = nullptr;
+    vector<shared_ptr<Instruction>> instructions_outside_of_sections;
 
-    vector<Instruction*> instructions;
+    shared_ptr<Section> current_section;
+    vector<shared_ptr<Section>> sections;
 
-    vector<char> buffer;
+    bool continuation_of_section = false;
 
-    void erase();
+    void process_directive_first_pass(shared_ptr<Instruction> instruction);
+    void process_label_first_pass(shared_ptr<Instruction> instruction);
+    void process_command_first_pass(shared_ptr<Instruction> instruction);
 
 protected:
 
@@ -30,11 +35,12 @@ protected:
     */
     virtual void second_pass();
 
+    /* TODO */
+    virtual void create_obj_file();
+
 public:
 
-    virtual ~TwoPassAssembler() {
-        //erase();
-    }
+    virtual ~TwoPassAssembler() { }
 
     virtual void assemble(string input_file_name, string output_file_name) override;
 };

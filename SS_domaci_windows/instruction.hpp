@@ -8,7 +8,7 @@
 
 using namespace std;
 
-enum class Opcode {
+enum class Command {
     ERROR = -1,
 
     HALT = 0,
@@ -39,17 +39,22 @@ enum class Opcode {
     STR = 25,
 };
 
+enum class Directive {
+    ERROR = -1,
+
+    GLOBAL,
+    EXTERN,
+    SECTION,
+    WORD,
+    SKIP,
+    EQU,
+    END,
+};
+
 class Instruction {
 
-    static unordered_map<string, Opcode> opcode;
-
-    struct InstructionMetadata {
-        Opcode opcode;
-        int number_of_operands;
-        bool jump;
-
-        InstructionMetadata(Opcode oc = Opcode::ERROR, int num_op = -1, bool jmp = false) : opcode(oc), number_of_operands(num_op), jump(jmp) { }
-    };
+    static unordered_map<string, Command> command_code;
+    static unordered_map<string, Directive> directive_code;
 
     int line = 0;
     vector<string> labels;
@@ -63,13 +68,16 @@ class Instruction {
     string directive_name = "";
     vector<string> directive_args;
 
+    int size = -1;
+
+    void calculate_size();
+
 public:
 
-    friend class TwoPassAssembler;
+    static Command get_command_code(string command_name);
+    static Directive get_directive_code(string directive_name);
 
-    static Opcode get_instruction_opcode(string name);
-
-    static InstructionMetadata get_instruction_metadata(Opcode opcode);
+    friend ostream& operator<<(ostream& os, const Instruction& i);
 
     int get_line() const {
         return line;
@@ -151,8 +159,13 @@ public:
         directive_args = dir_args;
     }
 
-    /* TODO */
-    size_t size() const;
+    size_t get_size() {
+        if (size == -1) {
+            calculate_size();
+        }
+
+        return size;
+    }
 };
 
 #endif

@@ -30,9 +30,6 @@
     <ClCompile Include="instruction.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LineParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -56,13 +53,7 @@
     <ClInclude Include="instruction.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LineParser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="parser.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="section.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="syntax_error.hpp">
@@ -72,6 +63,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="file_error.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="section.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

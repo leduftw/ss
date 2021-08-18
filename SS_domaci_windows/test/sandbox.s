@@ -1,4 +1,5 @@
-lab: .section text # bad
+.section text # comm
+xor *[r1 + $5], %r2
 .extern var1   ,   var2   ,    var3    #   ext
 .section abc #dusko
 .end #dusko

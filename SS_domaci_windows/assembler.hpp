@@ -4,7 +4,9 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <memory>
 
+#include "parser.hpp"
 #include "symbol_table.hpp"
 #include "instruction.hpp"
 
@@ -17,7 +19,8 @@ protected:
     ifstream input_file;
     ofstream output_file;
 
-    SymbolTable* symbol_table = nullptr;
+    shared_ptr<Parser> parser;
+    shared_ptr<SymbolTable> symbol_table;
 
 public:
 

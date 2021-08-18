@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <memory>
 
 #include "instruction.hpp"
 #include "syntax_error.hpp"
@@ -19,11 +20,14 @@ class Parser {
     regex operation_regex;
     regex directive_regex;
 
+    shared_ptr<Instruction> build_instruction();
+    void check_syntax(shared_ptr<Instruction> instruction);
+
 public:
 
     Parser(ifstream& in);
 
-    Instruction* get_next_instruction();
+    shared_ptr<Instruction> get_next_instruction();
 };
 
 #endif
