@@ -38,7 +38,6 @@ protected:
     */
     virtual void second_pass();
 
-    /* TODO */
     virtual void create_obj_file();
 
 public:
