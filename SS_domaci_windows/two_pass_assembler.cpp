@@ -63,7 +63,13 @@ void TwoPassAssembler::first_pass() {
         }
 
         if (current_section) {
-            current_section->increment_location_counter(instruction->get_size());
+            int sz = instruction->get_size();
+            if (sz < 0) {
+                string name = instruction->is_command() ? instruction->get_command_name() : instruction->get_directive_name();
+                throw logic_error("Instruction '" + name + "' at line " + to_string(instruction->get_line()) + " returned size " + to_string(sz) + ".");
+            }
+
+            current_section->increment_location_counter(sz);
         } else {
             cout << "Warning: Instruction " << instruction << " is not in any section.\n";
         }

@@ -2,8 +2,8 @@
 Name	Value	Section	Global	Entry
 .text	0	.text	0	1
 .bss	0	.bss	0	6
-foo	9	.text	0	4
-lab1	8	.text	0	2
-main	10	.text	0	3
+foo	-3	.text	0	4
+lab1	-4	.text	0	2
+main	-2	.text	0	3
 .data	0	.data	0	5
 

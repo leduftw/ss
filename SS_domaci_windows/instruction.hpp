@@ -167,7 +167,7 @@ public:
         directive_args = dir_args;
     }
 
-    size_t get_size() {
+    int get_size() {
         if (size == -1) {
             calculate_size();
         }

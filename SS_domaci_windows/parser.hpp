@@ -19,8 +19,8 @@ class Parser {
     int cur_line = 0;
 
     string literal = "\\d+";
-    string symbol = "[\\.A-Za-z_][\\.A-Za-z0-9_]*";
-    string reg = "(r[0-7])|(sp)|(pc)|(psw)";
+    string symbol = "([\\.A-Za-z_][\\.A-Za-z0-9_]*)";
+    string reg = "(?:(?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
 
     regex operation_regex;
     regex directive_regex;

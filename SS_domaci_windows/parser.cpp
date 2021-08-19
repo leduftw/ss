@@ -127,13 +127,13 @@ shared_ptr<Instruction> Parser::build_instruction() {
         } else {
             instruction->set_directive(false);
 
-            instruction->set_command_name(sm[2]);
+            instruction->set_command_name(Utils::trim_string(sm[2]));
             if (sm[3].matched) {
-                instruction->set_operand1(sm[3]);
+                instruction->set_operand1(Utils::trim_string(sm[3]));
             }
 
             if (sm[4].matched) {
-                instruction->set_operand2(sm[4]);
+                instruction->set_operand2(Utils::trim_string(sm[4]));
             }
         }
 
@@ -405,7 +405,7 @@ void Parser::check_syntax_command_reg_op(shared_ptr<Instruction> instruction) {
 }
 
 bool Parser::is_symbol(string s) {
-    return regex_match(s, regex(symbol));
+    return regex_match(s, regex(symbol)) && !is_register(s);
 }
 
 bool Parser::is_literal(string s) {
@@ -417,25 +417,98 @@ bool Parser::is_register(string s) {
 }
 
 bool Parser::is_operand(string s, bool is_jump) {
+    smatch sm;
     if (!is_jump) {
-        return regex_match(s, regex("\\$" + literal)) ||
-            regex_match(s, regex("\\$" + symbol)) ||
-            regex_match(s, regex(literal)) ||
-            regex_match(s, regex(symbol)) ||
-            regex_match(s, regex("%" + symbol)) ||
-            regex_match(s, regex(reg)) ||
-            regex_match(s, regex("\\[\\s*" + reg + "\\s*\\]")) ||
-            regex_match(s, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]")) ||
-            regex_match(s, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"));
+        if (regex_match(s, regex("\\$" + literal))) {
+            return true;
+        }
+
+        if (regex_match(s, sm, regex("\\$" + symbol))) {
+            if (sm[1].matched && !is_register(sm[1])) {
+                return true;
+            }
+        }
+
+        if (regex_match(s, regex(literal))) {
+            return true;
+        }
+
+        if (regex_match(s, sm, regex(symbol))) {
+            if (sm[1].matched && !is_register(sm[1])) {
+                return true;
+            }
+        }
+
+        if (regex_match(s, sm, regex("%" + symbol))) {
+            if (sm[1].matched && !is_register(sm[1])) {
+                return true;
+            }
+        }
+
+        if (regex_match(s, regex(reg))) {
+            return true;
+        }
+
+        if (regex_match(s, regex("\\[\\s*" + reg + "\\s*\\]"))) {
+            return true;
+        }
+
+        if (regex_match(s, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]"))) {
+            return true;
+        }
+
+        if (regex_match(s, sm, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"))) {
+            if (sm[1].matched && !is_register(sm[1])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    return regex_match(s, regex(literal)) ||
-        regex_match(s, regex(symbol)) ||
-        regex_match(s, regex("%" + symbol)) ||
-        regex_match(s, regex("\\*" + literal)) ||
-        regex_match(s, regex("\\*" + symbol)) ||
-        regex_match(s, regex("\\*" + reg)) ||
-        regex_match(s, regex("\\*\\[\\s*" + reg + "\\s*\\]")) ||
-        regex_match(s, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]")) ||
-        regex_match(s, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"));
+    if (regex_match(s, regex(literal))) {
+        return true;
+    }
+
+    if (regex_match(s, sm, regex(symbol))) {
+        if (sm[1].matched && !is_register(sm[1])) {
+            return true;
+        }
+    }
+
+    if (regex_match(s, sm, regex("%" + symbol))) {
+        if (sm[1].matched && !is_register(sm[1])) {
+            return true;
+        }
+    }
+
+    if (regex_match(s, regex("\\*" + literal))) {
+        return true;
+    }
+
+    if (regex_match(s, sm, regex("\\*" + symbol))) {
+        if (sm[1].matched && !is_register(sm[1])) {
+            return true;
+        }
+    }
+
+    if (regex_match(s, regex("\\*" + reg))) {
+        return true;
+    }
+
+    if (regex_match(s, regex("\\*\\[\\s*" + reg + "\\s*\\]"))) {
+        return true;
+    }
+
+    if (regex_match(s, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]"))) {
+        return true;
+    }
+
+    if (regex_match(s, sm, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"))) {
+        if (sm[1].matched && !is_register(sm[1])) {
+            return true;
+        }
+    }
+
+    return false;
 }
