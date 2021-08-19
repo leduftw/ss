@@ -10,7 +10,7 @@ lab2:
 lab3:
 lab4: mov r4, r5
 #lab4  : .global   a  ,  b    ,c   ,  d   
-  lab  :  
+  lab  :  	
 .global a
 .global a, b
 .global q # comment

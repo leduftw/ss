@@ -24,14 +24,14 @@ vector<string> Utils::split_string(string s, string delimiter) {
 }
 
 void Utils::left_trim_string(string& s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
+    s.erase(s.begin(), find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !isspace(ch);
     }));
 }
 
 void Utils::right_trim_string(string& s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
+    s.erase(find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !isspace(ch);
     }).base(), s.end());
 }
 

@@ -19,6 +19,8 @@ void TwoPassAssembler::assemble(string input_file_name, string output_file_name)
     first_pass();
 
     input_file.close();
+
+    // Create output file only if syntax analysis didn't throw any exceptions in first pass 
     output_file.open(output_file_name, ios::out | ios::trunc);
     if (!output_file.is_open()) {
         throw FileError(output_file_name);
@@ -51,7 +53,7 @@ void TwoPassAssembler::first_pass() {
             process_command_first_pass(instruction);
         }
 
-        if (current_section) {
+        if (instruction->get_directive_name() != "section" && current_section) {
             current_section->get_instructions().push_back(instruction);
         } else {
             instructions_outside_of_sections.push_back(instruction);

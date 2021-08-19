@@ -80,26 +80,32 @@ void Instruction::calculate_size() {
         if (directive_name == "word") {
             // Every argument takes 2 bytes
             size = directive_args.size() * 2;
+            return;
         }
 
         if (directive_name == "skip") {
             size = stoi(directive_args[0]);
+            return;
         }
 
         // Only .word and .skip directive increment location counter
         size = 0;
+        return;
     }
 
     // Instruction is command
     switch (get_command_code(command_name)) {
         case Command::HALT:
             size = 1;
+            break;
 
         case Command::INT:
             size = 2;
+            break;
 
         case Command::IRET:
             size = 1;
+            break;
 
         case Command::CALL:
             /* TODO */
@@ -108,6 +114,7 @@ void Instruction::calculate_size() {
 
         case Command::RET:
             size = 1;
+            break;
 
         case Command::JMP:
         case Command::JEQ:
@@ -120,9 +127,11 @@ void Instruction::calculate_size() {
         case Command::PUSH:
         case Command::POP:
             size = 2;
+            break;
 
         case Command::XCHG:
             size = 2;
+            break;
 
         case Command::ADD:
         case Command::SUB:
@@ -130,6 +139,7 @@ void Instruction::calculate_size() {
         case Command::DIV:
         case Command::CMP:
             size = 2;
+            break;
 
         case Command::NOT:
         case Command::AND:
@@ -137,10 +147,12 @@ void Instruction::calculate_size() {
         case Command::XOR:
         case Command::TEST:
             size = 2;
+            break;
 
         case Command::SHL:
         case Command::SHR:
             size = 2;
+            break;
 
         case Command::LDR:
             /* TODO */
