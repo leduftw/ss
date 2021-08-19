@@ -110,6 +110,7 @@ void Instruction::calculate_size() {
         case Command::CALL:
             /* TODO */
             // 3 or 5 bytes
+            size = 3;
             break;
 
         case Command::RET:
@@ -122,6 +123,7 @@ void Instruction::calculate_size() {
         case Command::JGT:
             /* TODO */
             // 3 or 5 bytes
+            size = 3;
             break;
 
         case Command::PUSH:
@@ -157,11 +159,13 @@ void Instruction::calculate_size() {
         case Command::LDR:
             /* TODO */
             // 3 or 5 bytes
+            size = 5;
             break;
 
         case Command::STR:
             /* TODO */
             // 3 or 5 bytes
+            size = 5;
             break;
     }
 }

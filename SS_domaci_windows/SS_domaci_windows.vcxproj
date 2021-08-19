@@ -144,6 +144,7 @@
     <ClCompile Include="parser.cpp" />
     <ClCompile Include="relocation_table.cpp" />
     <ClCompile Include="section.cpp" />
+    <ClCompile Include="semantic_error.cpp" />
     <ClCompile Include="symbol_table.cpp" />
     <ClCompile Include="two_pass_assembler.cpp" />
     <ClCompile Include="utils.cpp" />
@@ -155,6 +156,7 @@
     <ClInclude Include="parser.hpp" />
     <ClInclude Include="relocation_table.hpp" />
     <ClInclude Include="section.hpp" />
+    <ClInclude Include="semantic_error.hpp" />
     <ClInclude Include="symbol_table.hpp" />
     <ClInclude Include="syntax_error.hpp" />
     <ClInclude Include="two_pass_assembler.hpp" />

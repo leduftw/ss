@@ -1,6 +1,7 @@
 #include "two_pass_assembler.hpp"
 #include "file_error.hpp"
 #include "syntax_error.hpp"
+#include "semantic_error.hpp"
 
 void TwoPassAssembler::assemble(string input_file_name, string output_file_name) {
     cout << "Assembling " + input_file_name + " in two passes.\n";
@@ -70,8 +71,6 @@ void TwoPassAssembler::first_pass() {
             }
 
             current_section->increment_location_counter(sz);
-        } else {
-            cout << "Warning: Instruction " << instruction << " is not in any section.\n";
         }
     }
 
@@ -91,7 +90,8 @@ void TwoPassAssembler::first_pass() {
 void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> instruction) {
     process_label_first_pass(instruction);
 
-    if (instruction->get_directive_name() == "section") {
+    string directive_name = instruction->get_directive_name();
+    if (directive_name == "section") {
         string section_name = instruction->get_directive_args()[0];
         if (symbol_table->contains(section_name)) {
             auto symbol_info = symbol_table->get(section_name);
@@ -125,7 +125,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> inst
             symbol_table->insert(section_name, symbol_info);
         }
 
-    } else if (instruction->get_directive_name() == "equ") {
+    } else if (directive_name == "equ") {
         vector<string>& args = instruction->get_directive_args();
         string symbol_name = args[0];
 
@@ -134,6 +134,8 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> inst
         symbol_info->value = stoi(args[1]);
         symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
         symbol_info->entry_number = symbol_table->get_size() + 1;
+    } else if (!current_section && (directive_name == "word" || directive_name == "skip")) {
+        throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Directive '" + directive_name + "' must be inside a section.");
     }
 }
 

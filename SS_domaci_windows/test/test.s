@@ -1,3 +1,5 @@
+.equ a, 50
+
 .section .text
 	ldr r1, $100
 	ldr r1, $pca  #comm

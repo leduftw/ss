@@ -18,8 +18,11 @@ class Parser {
 
     int cur_line = 0;
 
-    string literal = "\\d+";
+    string literal = "(\\d+)";
+
+    // Warning: Following regex can also match registers, that's why we need additional processing if we get a match
     string symbol = "([\\.A-Za-z_][\\.A-Za-z0-9_]*)";
+
     string reg = "(?:(?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
 
     regex operation_regex;
