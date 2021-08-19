@@ -181,9 +181,11 @@ void TwoPassAssembler::generate_machine_code_for_section(shared_ptr<Section> sec
             machine_code[cur_pos++] = byte;
         }
 
+        /*
         if (instruction->get_size() != instruction_machine_code.size()) {
             throw logic_error("Instruction and generated machine code for instruction do not have equal size!");
         }
+        */
 
         section->increment_location_counter(instruction->get_size());
     }

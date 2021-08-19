@@ -53,7 +53,9 @@ Parser::Parser(ifstream& in_file) : input_file(in_file) {
 
 shared_ptr<Instruction> Parser::get_next_instruction() {
     shared_ptr<Instruction> instruction = build_instruction();
-    check_syntax(instruction);
+    if (instruction) {
+        check_syntax(instruction);
+    }
 
     return instruction;
 }
