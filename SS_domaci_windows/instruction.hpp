@@ -63,7 +63,7 @@ class Instruction {
     string command_name = "";
     string operand1 = "";
     string operand2 = "";
-
+    bool jump = false;
     
     string directive_name = "";
     vector<string> directive_args;
@@ -133,6 +133,14 @@ public:
 
     void set_operand2(string op2) {
         operand2 = op2;
+    }
+
+    bool is_jump() const {
+        return jump;
+    }
+
+    void set_jump(bool j) {
+        jump = j;
     }
 
     bool is_directive() const {

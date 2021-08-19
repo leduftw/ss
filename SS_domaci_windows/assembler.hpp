@@ -8,6 +8,7 @@
 
 #include "parser.hpp"
 #include "symbol_table.hpp"
+#include "relocation_table.hpp"
 #include "instruction.hpp"
 
 using namespace std;
@@ -21,6 +22,7 @@ protected:
 
     shared_ptr<Parser> parser;
     shared_ptr<SymbolTable> symbol_table;
+    shared_ptr<RelocationTable> relocation_table;
 
 public:
 

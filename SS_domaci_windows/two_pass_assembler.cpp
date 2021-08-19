@@ -10,8 +10,9 @@ void TwoPassAssembler::assemble(string input_file_name, string output_file_name)
         throw FileError(input_file_name);
     }
 
-    symbol_table = make_shared<SymbolTable>();
     parser = make_shared<Parser>(input_file);
+    symbol_table = make_shared<SymbolTable>();
+    relocation_table = make_shared<RelocationTable>();
     instructions_outside_of_sections.clear();
     current_section = nullptr;
     sections.clear();
@@ -55,7 +56,9 @@ void TwoPassAssembler::first_pass() {
 
         if (instruction->get_directive_name() != "section" && current_section) {
             current_section->get_instructions().push_back(instruction);
-        } else {
+        }
+
+        if (!current_section) {
             instructions_outside_of_sections.push_back(instruction);
         }
 
@@ -71,6 +74,7 @@ void TwoPassAssembler::first_pass() {
     }
 
     continuation_of_section = false;
+    current_section = nullptr;
 
     for (auto& section : sections) {
         vector<char>& machine_code_for_section = section->get_machine_code();
@@ -79,12 +83,6 @@ void TwoPassAssembler::first_pass() {
 }
 
 void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> instruction) {
-    /* CHECK WHICH DIRECTIVES CANNOT CONTAIN LABELS! */
-    string directive_name = instruction->get_directive_name();
-    if ((directive_name == "section" || directive_name == "global" || directive_name == "extern") && instruction->has_label()) {
-        throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Directive '" + directive_name + "' cannot contain labels.");
-    }
-
     process_label_first_pass(instruction);
 
     if (instruction->get_directive_name() == "section") {
@@ -115,14 +113,30 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> inst
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
             symbol_info->is_external = false;
+            symbol_info->symbol_type = SymbolTable::SymbolType::SECTION_NAME;
             symbol_info->entry_number = symbol_table->get_size() + 1;
 
             symbol_table->insert(section_name, symbol_info);
         }
+
+    } else if (instruction->get_directive_name() == "equ") {
+        vector<string>& args = instruction->get_directive_args();
+        string symbol_name = args[0];
+
+        // Other fields are not important
+        auto symbol_info = make_shared< SymbolTable::SymbolInfo>();
+        symbol_info->value = stoi(args[1]);
+        symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
+        symbol_info->entry_number = symbol_table->get_size() + 1;
     }
 }
 
 void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruction) {
+    // Label must be in section
+    if (!current_section && instruction->has_label()) {
+        throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Label must be placed inside a section.");
+    }
+
     for (string& label : instruction->get_labels()) {
         if (!symbol_table->contains(label)) {
             shared_ptr<SymbolTable::SymbolInfo> symbol_info = make_shared<SymbolTable::SymbolInfo>();
@@ -131,6 +145,7 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
             symbol_info->is_external = false;
+            symbol_info->symbol_type = SymbolTable::SymbolType::LABEL;
             symbol_info->entry_number = symbol_table->get_size() + 1;
 
             symbol_table->insert(label, symbol_info);
@@ -150,9 +165,32 @@ void TwoPassAssembler::process_command_first_pass(shared_ptr<Instruction> instru
 
 void TwoPassAssembler::second_pass() {
     cout << "Second pass...\n";
+
     for (auto& section : sections) {
         section->reset_location_counter();
+        generate_machine_code_for_section(section);
     }
+}
+
+void TwoPassAssembler::generate_machine_code_for_section(shared_ptr<Section> section) {
+    int cur_pos = 0;
+    for (auto& instruction : section->get_instructions()) {
+        vector<char> instruction_machine_code = generate_machine_code_for_instruction(instruction);
+        vector<char>& machine_code = section->get_machine_code();
+        for (char byte : instruction_machine_code) {
+            machine_code[cur_pos++] = byte;
+        }
+
+        if (instruction->get_size() != instruction_machine_code.size()) {
+            throw logic_error("Instruction and generated machine code for instruction do not have equal size!");
+        }
+
+        section->increment_location_counter(instruction->get_size());
+    }
+}
+
+vector<char> TwoPassAssembler::generate_machine_code_for_instruction(shared_ptr<Instruction> instruction) {
+    return { };
 }
 
 void TwoPassAssembler::create_obj_file() {

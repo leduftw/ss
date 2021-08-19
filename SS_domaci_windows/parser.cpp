@@ -2,8 +2,6 @@
 #include "utils.h"
 
 Parser::Parser(ifstream& in_file) : input_file(in_file) {
-    cur_line = 0;
-
     /*
         Label is optional and it can start with . or any other letter or digit or underscore.
         After that, it can only contain letters, digits and underscores.
@@ -144,5 +142,298 @@ shared_ptr<Instruction> Parser::build_instruction() {
 }
 
 void Parser::check_syntax(shared_ptr<Instruction> instruction) {
+    if (instruction->is_directive()) {
+        // Directive syntax check
+        switch (Instruction::get_directive_code(instruction->get_directive_name())) {
+            case Directive::GLOBAL:
+            case Directive::EXTERN:
+                check_syntax_directive_symbol_list(instruction);
+                break;
 
+            case Directive::SECTION:
+                check_syntax_directive_section_name(instruction);
+                break;
+
+            case Directive::WORD:
+                check_syntax_directive_symbol_or_literal_list(instruction);
+                break;
+
+            case Directive::SKIP:
+                check_syntax_directive_literal(instruction);
+                break;
+
+            case Directive::EQU:
+                check_syntax_directive_symbol_literal(instruction);
+                break;
+
+            case Directive::END:
+                check_syntax_directive_no_arguments(instruction);
+                break;
+
+            case Directive::ERROR:
+                throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Directive '" + instruction->get_directive_name() + "' not recognized.");
+                break;
+
+            default:
+                throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Directive '" + instruction->get_directive_name() + "' not recognized.");
+                break;
+        }
+
+    } else {
+        // Command syntax check
+        switch (Instruction::get_command_code(instruction->get_command_name())) {
+            case Command::HALT:
+                check_syntax_command_no_arguments(instruction);
+                break;
+
+            case Command::INT:
+                check_syntax_command_reg(instruction);
+                break;
+
+            case Command::IRET:
+                check_syntax_command_no_arguments(instruction);
+                break;
+
+            case Command::CALL:
+                instruction->set_jump(true);
+                check_syntax_command_operand(instruction);
+                break;
+
+            case Command::RET:
+                check_syntax_command_no_arguments(instruction);
+                break;
+
+            case Command::JMP:
+            case Command::JEQ:
+            case Command::JNE:
+            case Command::JGT:
+                instruction->set_jump(true);
+                check_syntax_command_operand(instruction);
+                break;
+
+            case Command::PUSH:
+            case Command::POP:
+                check_syntax_command_reg(instruction);
+                break;
+
+            case Command::XCHG:
+            case Command::ADD:
+            case Command::SUB:
+            case Command::MUL:
+            case Command::DIV:
+            case Command::CMP:
+                check_syntax_command_reg_reg(instruction);
+                break;
+
+            case Command::NOT:
+                check_syntax_command_reg(instruction);
+                break;
+
+            case Command::AND:
+            case Command::OR:
+            case Command::XOR:
+            case Command::TEST:
+            case Command::SHL:
+            case Command::SHR:
+                check_syntax_command_reg_reg(instruction);
+                break;
+
+            case Command::LDR:
+            case Command::STR:
+                check_syntax_command_reg_op(instruction);
+                break;
+
+            case Command::ERROR:
+                throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' not recognized.");
+                break;
+
+            default:
+                throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' not recognized.");
+                break;
+        }
+    }
+}
+
+void Parser::check_syntax_directive_symbol_list(shared_ptr<Instruction> instruction) {
+    vector<string>& args = instruction->get_directive_args();
+
+    if (args.empty()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_directive_name() + "' directive must have at least one argument.");
+    }
+
+    for (string& arg : args) {
+        if (!is_symbol(arg)) {
+            throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument '" + arg + "' in '" + instruction->get_directive_name() + "' directive is not valid symbol.");
+        }
+    }
+}
+
+void Parser::check_syntax_directive_section_name(shared_ptr<Instruction> instruction) {
+    vector<string>& args = instruction->get_directive_args();
+
+    if (args.empty()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Name of section missing in 'section' directive.");
+    }
+
+    if (args.size() > 1) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": 'section' directive must not have more than one argument.");
+    }
+
+    if (!is_symbol(args[0])) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument '" + args[0] + "' in 'section' directive is not valid symbol.");
+    }
+}
+
+void Parser::check_syntax_directive_symbol_or_literal_list(shared_ptr<Instruction> instruction) {
+    vector<string>& args = instruction->get_directive_args();
+
+    if (args.empty()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_directive_name() + "' directive must have at least one argument.");
+    }
+
+    for (string& arg : args) {
+        if (!is_symbol(arg) && !is_literal(arg)) {
+            throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument '" + arg + "' in '" + instruction->get_directive_name() + "' directive is neither valid symbol nor valid literal.");
+        }
+    }
+}
+
+void Parser::check_syntax_directive_literal(shared_ptr<Instruction> instruction) {
+    vector<string>& args = instruction->get_directive_args();
+
+    if (args.empty()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument of '" + instruction->get_directive_name() + "' directive not found.");
+    }
+
+    if (args.size() > 1) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_directive_name() + "' directive must have only one argument.");
+    }
+
+    if (!is_literal(args[0])) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument '" + args[0] + "' in '" + instruction->get_directive_name() + "' is not valid literal.");
+    }
+}
+
+void Parser::check_syntax_directive_symbol_literal(shared_ptr<Instruction> instruction) {
+    vector<string>& args = instruction->get_directive_args();
+
+    if (args.empty()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Arguments of '" + instruction->get_directive_name() + "' directive not found.");
+    }
+
+    if (args.size() > 2) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_directive_name() + "' directive must have only two arguments.");
+    }
+
+    if (!is_symbol(args[0])) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument '" + args[0] + "' in '" + instruction->get_directive_name() + "' directive is not valid symbol name.");
+    }
+
+    if (!is_literal(args[1])) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Argument '" + args[1] + "' in '" + instruction->get_directive_name() + "' directive is not valid literal.");
+    }
+}
+
+void Parser::check_syntax_directive_no_arguments(shared_ptr<Instruction> instruction) {
+    if (!instruction->get_directive_args().empty()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_directive_name() + "' directive must not have any arguments.");
+    }
+}
+
+void Parser::check_syntax_command_no_arguments(shared_ptr<Instruction> instruction) {
+    if (instruction->has_operand1() || instruction->has_operand2()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' must not have operands.");
+    }
+}
+
+void Parser::check_syntax_command_reg(shared_ptr<Instruction> instruction) {
+    if (!instruction->has_operand1()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' must have one operand.");
+    }
+
+    if (instruction->has_operand2()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' cannot have more than one operand.");
+    }
+
+    if (!is_register(instruction->get_operand1())) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand1() + "' is not valid register.");
+    }
+}
+
+void Parser::check_syntax_command_operand(shared_ptr<Instruction> instruction) {
+    if (!instruction->has_operand1()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' must have one operand.");
+    }
+
+    if (instruction->has_operand2()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' cannot have more than one operand.");
+    }
+
+    if (!is_operand(instruction->get_operand1(), instruction->is_jump())) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand1() + "' is not valid operand.");
+    }
+}
+
+void Parser::check_syntax_command_reg_reg(shared_ptr<Instruction> instruction) {
+    if (!instruction->has_operand1() || !instruction->has_operand2()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' must have two operands.");
+    }
+
+    if (!is_register(instruction->get_operand1())) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand1() + "' is not valid register.");
+    }
+
+    if (!is_register(instruction->get_operand2())) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand2() + "' is not valid register.");
+    }
+}
+
+void Parser::check_syntax_command_reg_op(shared_ptr<Instruction> instruction) {
+    if (!instruction->has_operand1() || !instruction->has_operand2()) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' must have two operands.");
+    }
+
+    if (!is_register(instruction->get_operand1())) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand1() + "' is not valid register.");
+    }
+
+    if (!is_operand(instruction->get_operand2(), instruction->is_jump())) {
+        throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand2() + "' is not valid operand.");
+    }
+}
+
+bool Parser::is_symbol(string s) {
+    return regex_match(s, regex(symbol));
+}
+
+bool Parser::is_literal(string s) {
+    return regex_match(s, regex(literal));
+}
+
+bool Parser::is_register(string s) {
+    return regex_match(s, regex(reg));
+}
+
+bool Parser::is_operand(string s, bool is_jump) {
+    if (!is_jump) {
+        return regex_match(s, regex("\\$" + literal)) ||
+            regex_match(s, regex("\\$" + symbol)) ||
+            regex_match(s, regex(literal)) ||
+            regex_match(s, regex(symbol)) ||
+            regex_match(s, regex("%" + symbol)) ||
+            regex_match(s, regex(reg)) ||
+            regex_match(s, regex("\\[\\s*" + reg + "\\s*\\]")) ||
+            regex_match(s, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]")) ||
+            regex_match(s, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"));
+    }
+
+    return regex_match(s, regex(literal)) ||
+        regex_match(s, regex(symbol)) ||
+        regex_match(s, regex("%" + symbol)) ||
+        regex_match(s, regex("\\*" + literal)) ||
+        regex_match(s, regex("\\*" + symbol)) ||
+        regex_match(s, regex("\\*" + reg)) ||
+        regex_match(s, regex("\\*\\[\\s*" + reg + "\\s*\\]")) ||
+        regex_match(s, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]")) ||
+        regex_match(s, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"));
 }

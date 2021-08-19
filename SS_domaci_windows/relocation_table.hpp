@@ -9,6 +9,13 @@
 using namespace std;
 
 class RelocationTable {
+
+
+
+public:
+
+
+
 };
 
 #endif

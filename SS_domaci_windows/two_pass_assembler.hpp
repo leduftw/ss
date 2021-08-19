@@ -23,6 +23,9 @@ class TwoPassAssembler : public Assembler {
     void process_label_first_pass(shared_ptr<Instruction> instruction);
     void process_command_first_pass(shared_ptr<Instruction> instruction);
 
+    void generate_machine_code_for_section(shared_ptr<Section> section);
+    vector<char> generate_machine_code_for_instruction(shared_ptr<Instruction> instruction);
+
 protected:
 
     /*

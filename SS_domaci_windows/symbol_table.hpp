@@ -13,12 +13,23 @@ using namespace std;
 
 class SymbolTable {
 public:
+
+    enum class SymbolType {
+        UNDEFINED = -1,
+
+        SECTION_NAME,
+        LABEL,
+        EQU_SYMBOL,
+    };
+
     struct SymbolInfo {
         int value = -1;
         shared_ptr<Section> section = nullptr;
         bool is_defined = false;
         bool is_global = false;
         bool is_external = false;
+        SymbolType symbol_type = SymbolType::UNDEFINED;
+
         int entry_number = -1;
     };
 
