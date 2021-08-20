@@ -44,16 +44,16 @@ class Parser {
     void check_syntax_command_reg_reg(shared_ptr<Instruction> instruction);
     void check_syntax_command_reg_op(shared_ptr<Instruction> instruction);
 
-    bool is_symbol(string s);
-    bool is_literal(string s);
-    bool is_register(string s);
-    bool is_operand(string s, bool is_jump);
-
 public:
 
     Parser(ifstream& in);
 
     shared_ptr<Instruction> get_next_instruction();
+
+    bool is_symbol(string s);
+    bool is_literal(string s);
+    bool is_register(string s);
+    bool is_operand(string s, bool is_jump);
 };
 
 #endif

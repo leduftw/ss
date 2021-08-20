@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <iomanip>
 
 #include "section.hpp"
 
@@ -53,6 +54,9 @@ public:
 
 private:
     unordered_map<string, shared_ptr<SymbolInfo>> symbols;
+
+    void print_header(ostream& os) const;
+    void print_content(ostream& os) const;
 };
 
 #endif

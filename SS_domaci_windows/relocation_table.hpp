@@ -14,7 +14,7 @@ class RelocationTable {
 
 public:
 
-
+    friend ostream& operator<<(ostream& os, const RelocationTable& rt);
 
 };
 

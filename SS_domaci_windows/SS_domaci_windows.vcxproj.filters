@@ -39,9 +39,6 @@
     <ClCompile Include="relocation_table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="semantic_error.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="assembler.hpp">

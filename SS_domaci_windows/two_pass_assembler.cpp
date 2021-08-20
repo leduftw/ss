@@ -82,21 +82,23 @@ void TwoPassAssembler::first_pass() {
     current_section = nullptr;
 
     for (auto& section : sections) {
-        vector<char>& machine_code_for_section = section->get_machine_code();
+        vector<byte>& machine_code_for_section = section->get_machine_code();
         machine_code_for_section.resize(section->get_location_counter());
     }
+
+    cout << "First pass done. Symbol table created.\n\n";
 }
 
-void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> instruction) {
-    process_label_first_pass(instruction);
+void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> directive) {
+    process_label_first_pass(directive);
 
-    string directive_name = instruction->get_directive_name();
+    string directive_name = directive->get_directive_name();
     if (directive_name == "section") {
-        string section_name = instruction->get_directive_args()[0];
+        string section_name = directive->get_directive_args()[0];
         if (symbol_table->contains(section_name)) {
             auto symbol_info = symbol_table->get(section_name);
             if (section_name != symbol_info->section->get_section_name()) {
-                throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Symbol '" + section_name + "' is already defined.");
+                throw SyntaxError("Syntax error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is already defined.");
             } else {
                 if (!continuation_of_section) {
                     sections.push_back(current_section);
@@ -126,7 +128,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> inst
         }
 
     } else if (directive_name == "equ") {
-        vector<string>& args = instruction->get_directive_args();
+        vector<string>& args = directive->get_directive_args();
         string symbol_name = args[0];
 
         // Other fields are not important
@@ -134,8 +136,11 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> inst
         symbol_info->value = stoi(args[1]);
         symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
         symbol_info->entry_number = symbol_table->get_size() + 1;
+
+        symbol_table->insert(symbol_name, symbol_info);
+
     } else if (!current_section && (directive_name == "word" || directive_name == "skip")) {
-        throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Directive '" + directive_name + "' must be inside a section.");
+        throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Directive '" + directive_name + "' must be inside a section.");
     }
 }
 
@@ -163,12 +168,12 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
     }
 }
 
-void TwoPassAssembler::process_command_first_pass(shared_ptr<Instruction> instruction) {
+void TwoPassAssembler::process_command_first_pass(shared_ptr<Instruction> command) {
     if (!current_section) {
-        throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Instruction '" + instruction->get_command_name() + "' must be specified inside a section.");
+        throw SyntaxError("Syntax error at line " + to_string(command->get_line()) + ": Instruction '" + command->get_command_name() + "' must be specified inside a section.");
     }
 
-    process_label_first_pass(instruction);
+    process_label_first_pass(command);
 }
 
 void TwoPassAssembler::second_pass() {
@@ -177,16 +182,24 @@ void TwoPassAssembler::second_pass() {
     for (auto& section : sections) {
         section->reset_location_counter();
         generate_machine_code_for_section(section);
+        section->set_machine_code_ready(true);
     }
+
+    cout << "Second pass done. Generated machine code for each section.\n\n";
 }
 
 void TwoPassAssembler::generate_machine_code_for_section(shared_ptr<Section> section) {
-    int cur_pos = 0;
+    int idx = 0;
+    vector<byte>& section_machine_code = section->get_machine_code();
     for (auto& instruction : section->get_instructions()) {
-        vector<char> instruction_machine_code = generate_machine_code_for_instruction(instruction);
-        vector<char>& machine_code = section->get_machine_code();
-        for (char byte : instruction_machine_code) {
-            machine_code[cur_pos++] = byte;
+        // Commands can only be in text section
+        if (instruction->is_command() && !section->is_text_section()) {
+            throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Commands must be placed inside text section.");
+        }
+
+        vector<byte> instruction_machine_code = generate_machine_code_instruction(instruction);
+        for (byte b : instruction_machine_code) {
+            section_machine_code[idx++] = b;
         }
 
         /*
@@ -199,10 +212,270 @@ void TwoPassAssembler::generate_machine_code_for_section(shared_ptr<Section> sec
     }
 }
 
-vector<char> TwoPassAssembler::generate_machine_code_for_instruction(shared_ptr<Instruction> instruction) {
+vector<byte> TwoPassAssembler::generate_machine_code_instruction(shared_ptr<Instruction> instruction) const {
+    if (instruction->is_command()) {
+        return generate_machine_code_command(instruction);
+    } else {
+        return generate_machine_code_directive(instruction);
+    }
+}
+
+vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruction> command) const {
+    switch (Instruction::get_command_code(command->get_command_name())) {
+        case Command::HALT:
+        {
+            byte instr_descr = 0x00;
+
+            return { instr_descr };
+            break;
+        }
+
+        case Command::INT:
+        {
+            byte reg_ind = get_register_index(command->get_operand1());
+
+            byte instr_descr = 0x10;
+            byte regs_descr = (reg_ind << 4) | 0x0F;
+
+            return { instr_descr, regs_descr };
+            break;
+        }
+
+        case Command::IRET:
+        {
+            byte instr_descr = 0x20;
+
+            return { instr_descr };
+            break;
+        }
+
+        case Command::CALL:
+        {
+            /* TODO */
+            break;
+        }
+
+        case Command::RET:
+        {
+            byte instr_descr = 0x40;
+
+            return { instr_descr };
+            break;
+        }
+
+        case Command::JMP:
+        case Command::JEQ:
+        case Command::JNE:
+        case Command::JGT:
+        {
+            /* TODO */
+            break;
+        }
+
+        case Command::PUSH:
+        case Command::POP:
+        {
+            /* TODO */
+            break;
+        }
+
+        case Command::XCHG:
+        {
+            byte reg_ind_dst = get_register_index(command->get_operand1());
+            byte reg_ind_src = get_register_index(command->get_operand2());
+
+            byte instr_descr = 0x60;
+            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+
+            return { instr_descr, regs_descr };
+            break;
+        }
+
+        case Command::ADD:
+        case Command::SUB:
+        case Command::MUL:
+        case Command::DIV:
+        case Command::CMP:
+        {
+            byte nibble_hi = 0x70;
+            byte nibble_lo = get_lower_nibble_arithmetic_operation(command);
+
+            byte reg_ind_dst = get_register_index(command->get_operand1());
+            byte reg_ind_src = get_register_index(command->get_operand2());
+
+            byte instr_descr = nibble_hi | nibble_lo;
+            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+
+            return { instr_descr, regs_descr };
+            break;
+        }
+
+        case Command::NOT:
+        case Command::AND:
+        case Command::OR:
+        case Command::XOR:
+        case Command::TEST:
+        {
+            byte nibble_hi = 0x80;
+            byte nibble_lo = get_lower_nibble_logical_operation(command);
+
+            byte reg_ind_dst = get_register_index(command->get_operand1());
+            byte reg_ind_src = 0x0F;
+            if (command->get_command_name() != "not") {
+                reg_ind_src = get_register_index(command->get_operand2());
+            }
+
+            byte instr_descr = nibble_hi | nibble_lo;
+            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+
+            return { instr_descr, regs_descr };
+            break;
+        }
+
+        case Command::SHL:
+        case Command::SHR:
+        {
+            byte nibble_hi = 0x90;
+            byte nibble_lo = get_lower_nibble_shift_operation(command);
+
+            byte reg_ind_dst = get_register_index(command->get_operand1());
+            byte reg_ind_src = get_register_index(command->get_operand2());
+
+            byte instr_descr = nibble_hi | nibble_lo;
+            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+
+            return { instr_descr, regs_descr };
+            break;
+        }
+
+        case Command::LDR:
+        case Command::STR:
+        {
+            /* TODO */
+            break;
+        }
+    }
+}
+
+byte TwoPassAssembler::get_register_index(string reg) const {
+    byte reg_ind = 0;
+    if (reg == "sp") {
+        reg_ind = 6;
+    } else if (reg == "pc") {
+        reg_ind = 7;
+    } else if (reg == "psw") {
+        reg_ind = 8;
+    } else {
+        // General purpose register, e.g. "r4"
+        reg_ind = reg[1] - '0';
+    }
+
+    return reg_ind;
+}
+
+byte TwoPassAssembler::get_lower_nibble_arithmetic_operation(shared_ptr<Instruction> command_arithmetic) const {
+    byte nibble_lo_add = 0x0;
+    byte nibble_lo_sub = 0x1;
+    byte nibble_lo_mul = 0x2;
+    byte nibble_lo_div = 0x3;
+    byte nibble_lo_cmp = 0x4;
+
+    string command_name = command_arithmetic->get_command_name();
+    if (command_name == "add") {
+        return nibble_lo_add;
+    } else if (command_name == "sub") {
+        return nibble_lo_sub;
+    } else if (command_name == "mul") {
+        return nibble_lo_mul;
+    } else if (command_name == "div") {
+        return nibble_lo_div;
+    } else if (command_name == "cmp") {
+        return nibble_lo_cmp;
+    }
+
+    throw logic_error("Instruction " + command_arithmetic->get_command_name() + " does not represent arithmetic instruction.");
+}
+
+byte TwoPassAssembler::get_lower_nibble_logical_operation(shared_ptr<Instruction> command_logical) const {
+    byte nibble_lo_not = 0x0;
+    byte nibble_lo_and = 0x1;
+    byte nibble_lo_or = 0x2;
+    byte nibble_lo_xor = 0x3;
+    byte nibble_lo_test = 0x4;
+
+    string command_name = command_logical->get_command_name();
+    if (command_name == "not") {
+        return nibble_lo_not;
+    } else if (command_name == "and") {
+        return nibble_lo_and;
+    } else if (command_name == "or") {
+        return nibble_lo_or;
+    } else if (command_name == "xor") {
+        return nibble_lo_xor;
+    } else if (command_name == "test") {
+        return nibble_lo_test;
+    }
+
+    throw logic_error("Instruction " + command_logical->get_command_name() + " does not represent logical instruction.");
+}
+
+byte TwoPassAssembler::get_lower_nibble_shift_operation(shared_ptr<Instruction> command_shift) const {
+    byte nibble_lo_shl = 0x0;
+    byte nibble_lo_shr = 0x1;
+
+    string command_name = command_shift->get_command_name();
+    if (command_name == "shl") {
+        return nibble_lo_shl;
+    } else if (command_name == "shr") {
+        return nibble_lo_shr;
+    }
+
+    throw logic_error("Instruction " + command_shift->get_command_name() + " does not represent shift instruction.");
+}
+
+vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instruction> directive) const {
+    // Only .word and .skip directive generate machine code
+    size_t number_of_bytes = directive->get_size();
+    vector<byte> code(number_of_bytes, 0);
+    if (directive->get_directive_name() == "skip") {
+        return code;
+    }
+
+    if (directive->get_directive_name() == "word") {
+        size_t idx = 0;
+        vector<string>& args = directive->get_directive_args();
+        for (string& arg : args) {
+            word data = 0;
+            if (parser->is_literal(arg)) {
+                data = stoi(arg);
+            } else {
+                auto symbol_info = symbol_table->get(arg);
+                data = symbol_info->value;
+            }
+
+            // Little-endian
+            code[idx++] = data & 0xFF;
+            code[idx++] = (data >> 4) & 0xFF;
+        }
+
+        return code;
+    }
+
     return { };
 }
 
 void TwoPassAssembler::create_obj_file() {
+    output_file << "Symbol table\n";
+    output_file << "============\n";
     output_file << *symbol_table << "\n";
+
+    output_file << "Sections\n";
+    output_file << "========\n";
+    for (auto& section : sections) {
+        output_file << *section << "\n\n";
+    }
+
+    output_file << "Relocation records\n";
+    output_file << "==================\n";
+    output_file << *relocation_table << "\n";
 }

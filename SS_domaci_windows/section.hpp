@@ -2,6 +2,7 @@
 #define SECTION_H
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <string>
 #include <memory>
@@ -10,14 +11,19 @@
 
 using namespace std;
 
+typedef int8_t byte;
+typedef int16_t word;
+
 class Section {
 
     size_t location_counter = 0;
 
     string section_name;
 
+    bool machine_code_ready = false;
+
     vector<shared_ptr<Instruction>> instructions;
-    vector<char> machine_code;
+    vector<byte> machine_code;
 
 public:
 
@@ -47,12 +53,24 @@ public:
         return section_name;
     }
 
+    bool is_machine_code_ready() const {
+        return machine_code_ready;
+    }
+
+    void set_machine_code_ready(bool ready) {
+        machine_code_ready = ready;
+    }
+
     vector<shared_ptr<Instruction>>& get_instructions() {
         return instructions;
     }
 
-    vector<char>& get_machine_code() {
+    vector<byte>& get_machine_code() {
         return machine_code;
+    }
+
+    bool is_text_section() const {
+        return section_name == "text" || section_name == ".text";
     }
 };
 

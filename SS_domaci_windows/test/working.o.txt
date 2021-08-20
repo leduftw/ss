@@ -1,0 +1,24 @@
+Symbol table
+============
+Name      Value     Section   Global    External  Entry     
+a         10        ABS       0         0         1         
+.text     0         .text     0         0         2         
+.bss      0         .bss      0         0         3         
+.data     0         .data     0         0         4         
+
+Sections
+========
+.section .text
+0x0000: 70 06 83 13
+
+.section .bss
+0x0000: 00 00 00 00 00 00 00 00
+0x0008: 00 00 00 00 00 00 00 00
+0x0010: 00 00 00 00 00 00 00 00
+
+.section .data
+0x0000: 0a 00 07 00
+
+Relocation records
+==================
+

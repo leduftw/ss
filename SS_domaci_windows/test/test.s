@@ -50,6 +50,7 @@
 .section .data
 	.word a, b, 100  # comment
 	.skip 5
+	add r2, r4
 	
 .section .text
 	xchg r3, r4
