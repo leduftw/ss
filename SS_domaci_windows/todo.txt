@@ -1,3 +1,2 @@
-- support for hex literals (and octal?)
 - addressing modes code generation
 - relocation records generation

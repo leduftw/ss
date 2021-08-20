@@ -133,7 +133,8 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
 
         // Other fields are not important
         auto symbol_info = make_shared< SymbolTable::SymbolInfo>();
-        symbol_info->value = stoi(args[1]);
+        // Third argument 0 means that it should automatically deduce base
+        symbol_info->value = stoi(args[1], nullptr, 0);
         symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
         symbol_info->entry_number = symbol_table->get_size() + 1;
 
@@ -447,7 +448,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instru
         for (string& arg : args) {
             word data = 0;
             if (parser->is_literal(arg)) {
-                data = stoi(arg);
+                data = stoi(arg, nullptr, 0);
             } else {
                 auto symbol_info = symbol_table->get(arg);
                 data = symbol_info->value;
@@ -455,7 +456,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instru
 
             // Little-endian
             code[idx++] = data & 0xFF;
-            code[idx++] = (data >> 4) & 0xFF;
+            code[idx++] = (data >> 8) & 0xFF;
         }
 
         return code;

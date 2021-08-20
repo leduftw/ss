@@ -23,6 +23,7 @@ Parser::Parser(ifstream& in_file) : input_file(in_file) {
             5) %b
             6) *[r1 + 123]
             7) *r6
+            8) 0x100
     */
     string operand_regex = "([^,#]+)\\s*";
 

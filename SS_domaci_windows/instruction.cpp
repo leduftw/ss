@@ -84,7 +84,7 @@ void Instruction::calculate_size() {
         }
 
         if (directive_name == "skip") {
-            size = stoi(directive_args[0]);
+            size = stoi(directive_args[0], nullptr, 0);
             return;
         }
 
