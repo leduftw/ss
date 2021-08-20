@@ -2,8 +2,8 @@
 #define FILE_ERROR_H
 
 #include <iostream>
-#include <string>
 #include <exception>
+#include <string>
 
 using namespace std;
 

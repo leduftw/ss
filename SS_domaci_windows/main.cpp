@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
 
     } catch (exception& e) {
         cerr << e.what() << "\n";
+        return 1;
     }
 
     return 0;
