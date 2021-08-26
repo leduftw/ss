@@ -128,7 +128,8 @@ void Instruction::calculate_size() {
 
         case Command::PUSH:
         case Command::POP:
-            size = 2;
+            // They are encoded via str and ldr
+            size = 3;
             break;
 
         case Command::XCHG:

@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 
-#include "section.hpp";
+#include "section.hpp"
 
 using namespace std;
 

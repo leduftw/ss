@@ -7,6 +7,8 @@
 .section .text
 	add r0, r6
 	xor r1, r3
+	push r2
+	pop r2
 	
 .section .bss
 	.skip 0x20

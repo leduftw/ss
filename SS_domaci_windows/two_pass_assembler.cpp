@@ -276,11 +276,9 @@ void TwoPassAssembler::generate_machine_code_section(shared_ptr<Section> section
             section_machine_code[idx++] = b;
         }
 
-        /*
         if (instruction->get_size() != instruction_machine_code.size()) {
             throw logic_error("Instruction and generated machine code for instruction do not have equal size!");
         }
-        */
 
         section->increment_location_counter(instruction->get_size());
     }
@@ -306,9 +304,9 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
 
         case Command::INT:
         {
-            byte reg_ind = get_register_index(command->get_operand1());
-
             byte instr_descr = 0x10;
+
+            byte reg_ind = get_register_index(command->get_operand1());
             byte regs_descr = (reg_ind << 4) | 0x0F;
 
             return { instr_descr, regs_descr };
@@ -347,18 +345,47 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         }
 
         case Command::PUSH:
+        {
+            // str has form: str regD, operand; operand <= regD
+            // push r2 is like sp -= 2, str r2, [sp] => register indirect, dec by two before
+            byte instr_descr = 0xB0;
+
+            byte reg_ind_dst = get_register_index(command->get_operand1());
+            byte reg_ind_src = 6;  // sp
+            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+
+            byte update_nibble = UpdateMode::DECREMENT_BY_TWO_BEFORE;
+            byte addr_mode_nibble = AddressingMode::REGISTER_INDIRECT;
+            byte addr_mode = (update_nibble << 4) | addr_mode_nibble;
+
+            return { instr_descr, regs_descr, addr_mode };
+            break;
+        }
+
         case Command::POP:
         {
-            /* TODO */
+            // ldr has form: ldr regD, operand; regD <= operand
+            // pop r2 is like ldr r2, [sp], sp += 2 => register indirect, inc by two after
+            byte instr_descr = 0xA0;
+
+            byte reg_ind_dst = get_register_index(command->get_operand1());
+            byte reg_ind_src = 6;  // sp
+            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+
+            byte update_nibble = UpdateMode::INCREMENT_BY_TWO_AFTER;
+            byte addr_mode_nibble = AddressingMode::REGISTER_INDIRECT;
+            byte addr_mode = (update_nibble << 4) | addr_mode_nibble;
+
+            return { instr_descr, regs_descr, addr_mode };
             break;
         }
 
         case Command::XCHG:
         {
+            byte instr_descr = 0x60;
+
             byte reg_ind_dst = get_register_index(command->get_operand1());
             byte reg_ind_src = get_register_index(command->get_operand2());
-
-            byte instr_descr = 0x60;
             byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
 
             return { instr_descr, regs_descr };
@@ -373,11 +400,10 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         {
             byte nibble_hi = 0x70;
             byte nibble_lo = get_lower_nibble_arithmetic_operation(command);
+            byte instr_descr = nibble_hi | nibble_lo;
 
             byte reg_ind_dst = get_register_index(command->get_operand1());
             byte reg_ind_src = get_register_index(command->get_operand2());
-
-            byte instr_descr = nibble_hi | nibble_lo;
             byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
 
             return { instr_descr, regs_descr };
@@ -392,14 +418,13 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         {
             byte nibble_hi = 0x80;
             byte nibble_lo = get_lower_nibble_logical_operation(command);
+            byte instr_descr = nibble_hi | nibble_lo;
 
             byte reg_ind_dst = get_register_index(command->get_operand1());
             byte reg_ind_src = 0x0F;
             if (command->get_command_name() != "not") {
                 reg_ind_src = get_register_index(command->get_operand2());
             }
-
-            byte instr_descr = nibble_hi | nibble_lo;
             byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
 
             return { instr_descr, regs_descr };
@@ -411,11 +436,10 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         {
             byte nibble_hi = 0x90;
             byte nibble_lo = get_lower_nibble_shift_operation(command);
+            byte instr_descr = nibble_hi | nibble_lo;
 
             byte reg_ind_dst = get_register_index(command->get_operand1());
             byte reg_ind_src = get_register_index(command->get_operand2());
-
-            byte instr_descr = nibble_hi | nibble_lo;
             byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
 
             return { instr_descr, regs_descr };
@@ -428,7 +452,12 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
             /* TODO */
             break;
         }
+
+        default:
+            throw logic_error("Logic error at line " + to_string(command->get_line()) + ": Command '" + command->get_command_name() + "' not recognized.");
     }
+
+    return  { };
 }
 
 byte TwoPassAssembler::get_register_index(string reg) const {

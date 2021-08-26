@@ -13,6 +13,23 @@ using namespace std;
 typedef int8_t byte;
 typedef int16_t word;
 
+struct AddressingMode {
+    static const byte IMMEDIATE = 0x0;
+    static const byte REGISTER_DIRECT = 0x1;
+    static const byte REGISTER_INDIRECT = 0x2;
+    static const byte REGISTER_INDIRECT_WITH_DISPLACEMENT = 0x3;
+    static const byte DIRECT_MEMORY = 0x4;
+    static const byte REGISTER_DIRECT_WITH_OPERAND = 0x5;  // when is this used?
+};
+
+struct UpdateMode {
+    static const byte NO_UPDATE = 0x0;
+    static const byte DECREMENT_BY_TWO_BEFORE = 0x1;
+    static const byte INCREMENT_BY_TWO_BEFORE = 0x2;
+    static const byte DECREMENT_BY_TWO_AFTER = 0x3;
+    static const byte INCREMENT_BY_TWO_AFTER = 0x4;
+};
+
 class TwoPassAssembler : public Assembler {
 
     shared_ptr<Section> current_section;
