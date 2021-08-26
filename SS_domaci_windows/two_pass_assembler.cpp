@@ -14,7 +14,6 @@ void TwoPassAssembler::assemble(string input_file_name, string output_file_name)
     parser = make_shared<Parser>(input_file);
     symbol_table = make_shared<SymbolTable>();
     relocation_table = make_shared<RelocationTable>();
-    instructions_outside_of_sections.clear();
     current_section = nullptr;
     sections.clear();
 
@@ -22,7 +21,7 @@ void TwoPassAssembler::assemble(string input_file_name, string output_file_name)
 
     input_file.close();
 
-    // Create output file only if syntax analysis didn't throw any exceptions in first pass 
+    // Create output file only if syntax and semantic analysis didn't throw any exceptions in first pass
     output_file.open(output_file_name, ios::out | ios::trunc);
     if (!output_file.is_open()) {
         throw FileError(output_file_name);
@@ -42,7 +41,7 @@ void TwoPassAssembler::first_pass() {
     shared_ptr<Instruction> instruction;
     while (true) {
         // Find first line which isn't empty and isn't comment-only
-        /* PARSER BY DEFINITION RETURNS VALID INSTRUCTION (TODO IN PARSER) */
+        // Parser by definition returns correct instruction, throws error otherwise
         while (!(instruction = parser->get_next_instruction()));
 
         if (instruction->is_directive() && instruction->get_directive_name() == "end") {
@@ -55,12 +54,25 @@ void TwoPassAssembler::first_pass() {
             process_command_first_pass(instruction);
         }
 
-        if (instruction->get_directive_name() != "section" && current_section) {
+        // All commands are saved, but only word and skip directives are saved since 
+        // only they generate code. All other directives are not saved in instruction buffer.
+        if (instruction->is_command()) {
+            if (!current_section) {
+                throw logic_error("Logic error at line " + to_string(instruction->get_line()) + ": Command not in section.");
+            }
+
             current_section->get_instructions().push_back(instruction);
         }
 
-        if (!current_section) {
-            instructions_outside_of_sections.push_back(instruction);
+        if (instruction->is_directive() &&
+            (instruction->get_directive_name() == "word" || instruction->get_directive_name() == "skip")
+            ) {
+
+            if (!current_section) {
+                throw logic_error("Logic error at line " + to_string(instruction->get_line()) + ": Directive '" + instruction->get_directive_name() + "' not in section.");
+            }
+
+            current_section->get_instructions().push_back(instruction);
         }
 
         if (current_section) {
@@ -98,7 +110,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
         if (symbol_table->contains(section_name)) {
             auto symbol_info = symbol_table->get(section_name);
             if (section_name != symbol_info->section->get_section_name()) {
-                throw SyntaxError("Syntax error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is already defined.");
+                throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is already defined.");
             } else {
                 if (!continuation_of_section) {
                     sections.push_back(current_section);
@@ -120,7 +132,6 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
             symbol_info->section = current_section;
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
-            symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::SECTION_NAME;
             symbol_info->entry_number = symbol_table->get_size() + 1;
 
@@ -131,14 +142,66 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
         vector<string>& args = directive->get_directive_args();
         string symbol_name = args[0];
 
-        // Other fields are not important
-        auto symbol_info = make_shared< SymbolTable::SymbolInfo>();
-        // Third argument 0 means that it should automatically deduce base
-        symbol_info->value = stoi(args[1], nullptr, 0);
-        symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
-        symbol_info->entry_number = symbol_table->get_size() + 1;
+        if (symbol_table->contains(symbol_name)) {
+            auto symbol_info = symbol_table->get(symbol_name);
+            if (symbol_info->is_defined) {
+                throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + symbol_name + "' is already defined.");
+            }
 
-        symbol_table->insert(symbol_name, symbol_info);
+            symbol_info->value = stoi(args[1], nullptr, 0);
+            symbol_info->is_defined = true;
+            symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
+
+        } else {
+            // Other fields are not important
+            auto symbol_info = make_shared< SymbolTable::SymbolInfo>();
+            // Third argument 0 means that it should automatically deduce base
+            symbol_info->value = stoi(args[1], nullptr, 0);
+            symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
+            symbol_info->entry_number = symbol_table->get_size() + 1;
+
+            symbol_table->insert(symbol_name, symbol_info);
+        }
+
+    } else if (directive_name == "global") {
+        vector<string>& args = directive->get_directive_args();
+        for (string& arg : args) {
+            if (symbol_table->contains(arg)) {
+                auto symbol_info = symbol_table->get(arg);
+                if (!symbol_info->is_global) {
+                    symbol_info->is_global = true;
+                } else {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
+                }
+
+            } else {
+                auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
+                symbol_info->is_global = true;
+                symbol_info->entry_number = symbol_table->get_size() + 1;
+
+                symbol_table->insert(arg, symbol_info);
+            }
+        }
+        
+    } else if (directive_name == "extern") {
+        vector<string>& args = directive->get_directive_args();
+        for (string& arg : args) {
+            if (symbol_table->contains(arg)) {
+                auto symbol_info = symbol_table->get(arg);
+                if (!symbol_info->is_global) {
+                    symbol_info->is_global = true;
+                } else {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
+                }
+
+            } else {
+                auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
+                symbol_info->is_global = true;
+                symbol_info->entry_number = symbol_table->get_size() + 1;
+
+                symbol_table->insert(arg, symbol_info);
+            }
+        }
 
     } else if (!current_section && (directive_name == "word" || directive_name == "skip")) {
         throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Directive '" + directive_name + "' must be inside a section.");
@@ -158,13 +221,21 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
             symbol_info->section = current_section;
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
-            symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::LABEL;
             symbol_info->entry_number = symbol_table->get_size() + 1;
 
             symbol_table->insert(label, symbol_info);
+
         } else {
-            throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Symbol '" + label + "' is already defined.");
+            auto symbol_info = symbol_table->get(label);
+            if (symbol_info->is_defined) {
+                throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Symbol '" + label + "' is already defined.");
+            }
+
+            symbol_info->value = current_section->get_location_counter();
+            symbol_info->section = current_section;
+            symbol_info->is_defined = true;
+            symbol_info->symbol_type = SymbolTable::SymbolType::LABEL;
         }
     }
 }
@@ -182,21 +253,23 @@ void TwoPassAssembler::second_pass() {
 
     for (auto& section : sections) {
         section->reset_location_counter();
-        generate_machine_code_for_section(section);
+        generate_machine_code_section(section);
         section->set_machine_code_ready(true);
     }
 
     cout << "Second pass done. Generated machine code for each section.\n\n";
 }
 
-void TwoPassAssembler::generate_machine_code_for_section(shared_ptr<Section> section) {
+void TwoPassAssembler::generate_machine_code_section(shared_ptr<Section> section) {
     int idx = 0;
     vector<byte>& section_machine_code = section->get_machine_code();
     for (auto& instruction : section->get_instructions()) {
+        /*
         // Commands can only be in text section
         if (instruction->is_command() && !section->is_text_section()) {
             throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Commands must be placed inside text section.");
         }
+        */
 
         vector<byte> instruction_machine_code = generate_machine_code_instruction(instruction);
         for (byte b : instruction_machine_code) {
@@ -450,6 +523,10 @@ vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instru
             if (parser->is_literal(arg)) {
                 data = stoi(arg, nullptr, 0);
             } else {
+                if (!symbol_table->contains(arg)) {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is undefined.");
+                }
+
                 auto symbol_info = symbol_table->get(arg);
                 data = symbol_info->value;
             }

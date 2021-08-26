@@ -1,2 +1,7 @@
+- interna tabela simbola asemblera i tabela simbola u relokativnom objektnom fajlu ne moraju biti iste
+
 - addressing modes code generation
 - relocation records generation
+
+- Moskva
+- Veljko Djorovic

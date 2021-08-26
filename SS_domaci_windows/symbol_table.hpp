@@ -28,7 +28,6 @@ public:
         shared_ptr<Section> section = nullptr;
         bool is_defined = false;
         bool is_global = false;
-        bool is_external = false;
         SymbolType symbol_type = SymbolType::UNDEFINED;
 
         int entry_number = -1;

@@ -15,8 +15,6 @@ typedef int16_t word;
 
 class TwoPassAssembler : public Assembler {
 
-    vector<shared_ptr<Instruction>> instructions_outside_of_sections;
-
     shared_ptr<Section> current_section;
     vector<shared_ptr<Section>> sections;
 
@@ -49,7 +47,7 @@ class TwoPassAssembler : public Assembler {
     void process_label_first_pass(shared_ptr<Instruction> instruction);
     void process_command_first_pass(shared_ptr<Instruction> command);
 
-    void generate_machine_code_for_section(shared_ptr<Section> section);
+    void generate_machine_code_section(shared_ptr<Section> section);
     vector<byte> generate_machine_code_instruction(shared_ptr<Instruction> instruction) const;
 
     vector<byte> generate_machine_code_command(shared_ptr<Instruction> command) const;

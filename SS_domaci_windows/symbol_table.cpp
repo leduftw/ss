@@ -19,7 +19,6 @@ void SymbolTable::print_header(ostream& os) const {
     os << left << setw(10) << setfill(' ') << "Value";
     os << left << setw(10) << setfill(' ') << "Section";
     os << left << setw(10) << setfill(' ') << "Global";
-    os << left << setw(10) << setfill(' ') << "External";
     os << left << setw(10) << setfill(' ') << "Entry";
     os << "\n";
 }
@@ -30,7 +29,6 @@ void SymbolTable::print_content(ostream& os) const {
         os << left << setw(10) << p.second->value;
         os << left << setw(10) << (p.second->section ? p.second->section->get_section_name() : "ABS");
         os << left << setw(10) << p.second->is_global;
-        os << left << setw(10) << p.second->is_external;
         os << left << setw(10) << p.second->entry_number;
         os << "\n";
     }
