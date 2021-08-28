@@ -29,9 +29,15 @@ class RelocationTable {
         RelocationType relocation_type;
     };
 
+    size_t size = 0;
+
 public:
 
     friend ostream& operator<<(ostream& os, const RelocationTable& rt);
+
+    size_t get_size() const {
+        return size;
+    }
 
 };
 

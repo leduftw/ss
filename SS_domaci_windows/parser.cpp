@@ -1,13 +1,11 @@
 #include "parser.hpp"
 #include "utils.h"
 
-//string Parser::literal = "(?:(?:0x)|(?:0X))?(\\d+)";
 string Parser::literal = "((?:\\d+)|(?:0x\\d+)|(?:0X\\d+))";
 
 // Warning: Following regex can also match registers, that's why we need additional processing if we get a match
 string Parser::symbol = "([\\.A-Za-z_][\\.A-Za-z0-9_]*)";
 
-//string Parser::reg = "(?:(?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
 string Parser::reg = "((?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
 
 Parser::Parser(ifstream& in_file) : input_file(in_file) {

@@ -41,7 +41,7 @@ void TwoPassAssembler::first_pass() {
     shared_ptr<Instruction> instruction;
     while (true) {
         // Find first line which isn't empty and isn't comment-only
-        // Parser by definition returns correct instruction, throws error otherwise
+        // Parser by definition returns correct instruction (syntax-wise), throws error otherwise
         while (!(instruction = parser->get_next_instruction()));
 
         if (instruction->is_directive() && instruction->get_directive_name() == "end") {
@@ -982,7 +982,9 @@ void TwoPassAssembler::create_obj_file() {
         output_file << *section << "\n\n";
     }
 
-    output_file << "Relocation records\n";
-    output_file << "==================\n";
-    output_file << *relocation_table << "\n";
+    if (relocation_table->get_size() != 0) {
+        output_file << "Relocation records\n";
+        output_file << "==================\n";
+        output_file << *relocation_table << "\n";
+    }
 }

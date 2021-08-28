@@ -14,6 +14,3 @@ Sections
 0x0020: f4 03 01 00 30 f3 03 00
 0x0028: 10
 
-Relocation records
-==================
-
