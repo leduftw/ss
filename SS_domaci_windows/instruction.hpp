@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <regex>
 
 using namespace std;
 
@@ -69,8 +70,6 @@ class Instruction {
     vector<string> directive_args;
 
     int size = -1;
-
-    void calculate_size();
 
 public:
 
@@ -167,12 +166,17 @@ public:
         directive_args = dir_args;
     }
 
-    int get_size() {
+    int get_size() const {
         if (size == -1) {
-            calculate_size();
+            string name = directive ? directive_name : command_name;
+            throw logic_error("Logic error in instruction in instruction " + name + " at line " + to_string(line) + ": Size not yet calculated.");
         }
 
         return size;
+    }
+
+    void set_size(int sz) {
+        size = sz;
     }
 };
 

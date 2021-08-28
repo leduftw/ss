@@ -1,6 +1,15 @@
 #include "parser.hpp"
 #include "utils.h"
 
+//string Parser::literal = "(?:(?:0x)|(?:0X))?(\\d+)";
+string Parser::literal = "((?:\\d+)|(?:0x\\d+)|(?:0X\\d+))";
+
+// Warning: Following regex can also match registers, that's why we need additional processing if we get a match
+string Parser::symbol = "([\\.A-Za-z_][\\.A-Za-z0-9_]*)";
+
+//string Parser::reg = "(?:(?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
+string Parser::reg = "((?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
+
 Parser::Parser(ifstream& in_file) : input_file(in_file) {
     /*
         Label is optional and it can start with . or any other letter or digit or underscore.
@@ -144,32 +153,41 @@ shared_ptr<Instruction> Parser::build_instruction() {
     return instruction;
 }
 
+/*
+    Checks syntax for each instruction and further builds instruction - calculates size.
+*/
 void Parser::check_syntax(shared_ptr<Instruction> instruction) {
     if (instruction->is_directive()) {
         // Directive syntax check
         switch (Instruction::get_directive_code(instruction->get_directive_name())) {
             case Directive::GLOBAL:
             case Directive::EXTERN:
+                instruction->set_size(0);
                 check_syntax_directive_symbol_list(instruction);
                 break;
 
             case Directive::SECTION:
+                instruction->set_size(0);
                 check_syntax_directive_section_name(instruction);
                 break;
 
             case Directive::WORD:
+                instruction->set_size(instruction->get_directive_args().size() * 2);
                 check_syntax_directive_symbol_or_literal_list(instruction);
                 break;
 
             case Directive::SKIP:
+                instruction->set_size(stoi(instruction->get_directive_args()[0], nullptr, 0));
                 check_syntax_directive_literal(instruction);
                 break;
 
             case Directive::EQU:
+                instruction->set_size(0);
                 check_syntax_directive_symbol_literal(instruction);
                 break;
 
             case Directive::END:
+                instruction->set_size(0);
                 check_syntax_directive_no_arguments(instruction);
                 break;
 
@@ -186,23 +204,28 @@ void Parser::check_syntax(shared_ptr<Instruction> instruction) {
         // Command syntax check
         switch (Instruction::get_command_code(instruction->get_command_name())) {
             case Command::HALT:
+                instruction->set_size(1);
                 check_syntax_command_no_arguments(instruction);
                 break;
 
             case Command::INT:
+                instruction->set_size(2);
                 check_syntax_command_reg(instruction);
                 break;
 
             case Command::IRET:
+                instruction->set_size(1);
                 check_syntax_command_no_arguments(instruction);
                 break;
 
             case Command::CALL:
+                // Size is calculated in check_syntax_command_operand()
                 instruction->set_jump(true);
                 check_syntax_command_operand(instruction);
                 break;
 
             case Command::RET:
+                instruction->set_size(1);
                 check_syntax_command_no_arguments(instruction);
                 break;
 
@@ -210,12 +233,14 @@ void Parser::check_syntax(shared_ptr<Instruction> instruction) {
             case Command::JEQ:
             case Command::JNE:
             case Command::JGT:
+                // Size is calculated in check_syntax_command_operand()
                 instruction->set_jump(true);
                 check_syntax_command_operand(instruction);
                 break;
 
             case Command::PUSH:
             case Command::POP:
+                instruction->set_size(3);
                 check_syntax_command_reg(instruction);
                 break;
 
@@ -225,10 +250,12 @@ void Parser::check_syntax(shared_ptr<Instruction> instruction) {
             case Command::MUL:
             case Command::DIV:
             case Command::CMP:
+                instruction->set_size(2);
                 check_syntax_command_reg_reg(instruction);
                 break;
 
             case Command::NOT:
+                instruction->set_size(2);
                 check_syntax_command_reg(instruction);
                 break;
 
@@ -238,11 +265,13 @@ void Parser::check_syntax(shared_ptr<Instruction> instruction) {
             case Command::TEST:
             case Command::SHL:
             case Command::SHR:
+                instruction->set_size(2);
                 check_syntax_command_reg_reg(instruction);
                 break;
 
             case Command::LDR:
             case Command::STR:
+                // Size is calculated in check_syntax_command_reg_op()
                 check_syntax_command_reg_op(instruction);
                 break;
 
@@ -372,8 +401,15 @@ void Parser::check_syntax_command_operand(shared_ptr<Instruction> instruction) {
         throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": Command '" + instruction->get_command_name() + "' cannot have more than one operand.");
     }
 
-    if (!is_operand(instruction->get_operand1(), instruction->is_jump())) {
+    pair<bool, byte> p = is_operand(instruction->get_operand1(), instruction->is_jump());
+    if (!p.first) {
         throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand1() + "' is not valid operand.");
+    }
+
+    if (p.second == AddressingMode::REGISTER_DIRECT || p.second == AddressingMode::REGISTER_INDIRECT) {
+        instruction->set_size(3);
+    } else {
+        instruction->set_size(5);
     }
 }
 
@@ -400,8 +436,15 @@ void Parser::check_syntax_command_reg_op(shared_ptr<Instruction> instruction) {
         throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand1() + "' is not valid register.");
     }
 
-    if (!is_operand(instruction->get_operand2(), instruction->is_jump())) {
+    pair<bool, byte> p = is_operand(instruction->get_operand2(), instruction->is_jump());
+    if (!p.first) {
         throw SyntaxError("Syntax error at line " + to_string(cur_line) + ": '" + instruction->get_operand2() + "' is not valid operand.");
+    }
+
+    if (p.second == AddressingMode::REGISTER_DIRECT || p.second == AddressingMode::REGISTER_INDIRECT) {
+        instruction->set_size(3);
+    } else {
+        instruction->set_size(5);
     }
 }
 
@@ -417,99 +460,99 @@ bool Parser::is_register(string s) {
     return regex_match(s, regex(reg));
 }
 
-bool Parser::is_operand(string s, bool is_jump) {
+pair<bool, byte> Parser::is_operand(string s, bool is_jump) {
     smatch sm;
     if (!is_jump) {
-        if (regex_match(s, regex("\\$" + literal))) {
-            return true;
+        if (regex_match(s, sm, regex("\\$" + literal))) {
+            return { true, AddressingMode::IMMEDIATE };
         }
 
         if (regex_match(s, sm, regex("\\$" + symbol))) {
             if (sm[1].matched && !is_register(sm[1])) {
-                return true;
+                return { true, AddressingMode::IMMEDIATE };
             }
         }
 
-        if (regex_match(s, regex(literal))) {
-            return true;
+        if (regex_match(s, sm, regex(literal))) {
+            return { true, AddressingMode::DIRECT_MEMORY };
         }
 
         if (regex_match(s, sm, regex(symbol))) {
             if (sm[1].matched && !is_register(sm[1])) {
-                return true;
+                return { true, AddressingMode::DIRECT_MEMORY };
             }
         }
 
         if (regex_match(s, sm, regex("%" + symbol))) {
             if (sm[1].matched && !is_register(sm[1])) {
-                return true;
+                return { true, AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT };
             }
         }
 
-        if (regex_match(s, regex(reg))) {
-            return true;
+        if (regex_match(s, sm, regex(reg))) {
+            return { true, AddressingMode::REGISTER_DIRECT };
         }
 
-        if (regex_match(s, regex("\\[\\s*" + reg + "\\s*\\]"))) {
-            return true;
+        if (regex_match(s, sm, regex("\\[\\s*" + reg + "\\s*\\]"))) {
+            return { true, AddressingMode::REGISTER_INDIRECT };
         }
 
-        if (regex_match(s, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]"))) {
-            return true;
+        if (regex_match(s, sm, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]"))) {
+            return { true, AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT };
         }
 
         if (regex_match(s, sm, regex("\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"))) {
-            if (sm[1].matched && !is_register(sm[1])) {
-                return true;
+            if (sm[2].matched && !is_register(sm[2])) {
+                return { true, AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT };
             }
         }
 
-        return false;
+        return { false, AddressingMode::ERROR };
     }
 
-    if (regex_match(s, regex(literal))) {
-        return true;
+    if (regex_match(s, sm, regex(literal))) {
+        return { true, AddressingMode::IMMEDIATE };
     }
 
     if (regex_match(s, sm, regex(symbol))) {
         if (sm[1].matched && !is_register(sm[1])) {
-            return true;
+            return { true, AddressingMode::IMMEDIATE };
         }
     }
 
     if (regex_match(s, sm, regex("%" + symbol))) {
         if (sm[1].matched && !is_register(sm[1])) {
-            return true;
+            return { true, AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT };
         }
     }
 
-    if (regex_match(s, regex("\\*" + literal))) {
-        return true;
+    if (regex_match(s, sm, regex("\\*" + literal))) {
+        return { true, AddressingMode::DIRECT_MEMORY };
     }
 
     if (regex_match(s, sm, regex("\\*" + symbol))) {
         if (sm[1].matched && !is_register(sm[1])) {
-            return true;
+            return { true, AddressingMode::DIRECT_MEMORY };
         }
     }
 
-    if (regex_match(s, regex("\\*" + reg))) {
-        return true;
+    if (regex_match(s, sm, regex("\\*" + reg))) {
+        return { true, AddressingMode::REGISTER_DIRECT };
     }
 
-    if (regex_match(s, regex("\\*\\[\\s*" + reg + "\\s*\\]"))) {
-        return true;
+    if (regex_match(s, sm, regex("\\*\\[\\s*" + reg + "\\s*\\]"))) {
+        return { true, AddressingMode::REGISTER_INDIRECT };
     }
 
-    if (regex_match(s, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]"))) {
-        return true;
+    if (regex_match(s, sm, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + literal + "\\s*\\]"))) {
+        return { true, AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT };
     }
 
     if (regex_match(s, sm, regex("\\*\\[\\s*" + reg + "\\s* \\+ \\s*" + symbol + "\\s*\\]"))) {
-        if (sm[1].matched && !is_register(sm[1])) {
-            return true;
+        if (sm[2].matched && !is_register(sm[2])) {
+            return { true, AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT };
         }
     }
 
-    return false;
+    return { false, AddressingMode::ERROR };
 }

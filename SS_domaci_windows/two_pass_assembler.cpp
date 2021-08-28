@@ -32,7 +32,7 @@ void TwoPassAssembler::assemble(string input_file_name, string output_file_name)
     create_obj_file();
     output_file.close();
 
-    cout << "Assembling finished. Created object file " + output_file_name + "\n";
+    cout << "Assembling finished. Created object file " + output_file_name + ".\n";
 }
 
 void TwoPassAssembler::first_pass() {
@@ -56,21 +56,10 @@ void TwoPassAssembler::first_pass() {
 
         // All commands are saved, but only word and skip directives are saved since 
         // only they generate code. All other directives are not saved in instruction buffer.
-        if (instruction->is_command()) {
-            if (!current_section) {
-                throw logic_error("Logic error at line " + to_string(instruction->get_line()) + ": Command not in section.");
-            }
-
-            current_section->get_instructions().push_back(instruction);
-        }
-
-        if (instruction->is_directive() &&
+        if (instruction->is_command() || (instruction->is_directive() &&
             (instruction->get_directive_name() == "word" || instruction->get_directive_name() == "skip")
+            )
             ) {
-
-            if (!current_section) {
-                throw logic_error("Logic error at line " + to_string(instruction->get_line()) + ": Directive '" + instruction->get_directive_name() + "' not in section.");
-            }
 
             current_section->get_instructions().push_back(instruction);
         }
@@ -79,7 +68,7 @@ void TwoPassAssembler::first_pass() {
             int sz = instruction->get_size();
             if (sz < 0) {
                 string name = instruction->is_command() ? instruction->get_command_name() : instruction->get_directive_name();
-                throw logic_error("Instruction '" + name + "' at line " + to_string(instruction->get_line()) + " returned size " + to_string(sz) + ".");
+                throw logic_error("Logic error at line " + to_string(instruction->get_line()) + "Instruction '" + name + "' at line " + to_string(instruction->get_line()) + " returned size " + to_string(sz) + ".");
             }
 
             current_section->increment_location_counter(sz);
@@ -154,9 +143,10 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
 
         } else {
             // Other fields are not important
-            auto symbol_info = make_shared< SymbolTable::SymbolInfo>();
+            auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
             // Third argument 0 means that it should automatically deduce base
             symbol_info->value = stoi(args[1], nullptr, 0);
+            symbol_info->is_defined = true;
             symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
             symbol_info->entry_number = symbol_table->get_size() + 1;
 
@@ -182,7 +172,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 symbol_table->insert(arg, symbol_info);
             }
         }
-        
+
     } else if (directive_name == "extern") {
         vector<string>& args = directive->get_directive_args();
         for (string& arg : args) {
@@ -242,7 +232,7 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
 
 void TwoPassAssembler::process_command_first_pass(shared_ptr<Instruction> command) {
     if (!current_section) {
-        throw SyntaxError("Syntax error at line " + to_string(command->get_line()) + ": Instruction '" + command->get_command_name() + "' must be specified inside a section.");
+        throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Instruction '" + command->get_command_name() + "' must be specified inside a section.");
     }
 
     process_label_first_pass(command);
@@ -277,7 +267,7 @@ void TwoPassAssembler::generate_machine_code_section(shared_ptr<Section> section
         }
 
         if (instruction->get_size() != instruction_machine_code.size()) {
-            throw logic_error("Instruction and generated machine code for instruction do not have equal size!");
+            throw logic_error("Logic error at line " + to_string(instruction->get_line()) + ": Instruction and generated machine code for instruction do not have equal size!");
         }
 
         section->increment_location_counter(instruction->get_size());
@@ -293,7 +283,8 @@ vector<byte> TwoPassAssembler::generate_machine_code_instruction(shared_ptr<Inst
 }
 
 vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruction> command) const {
-    switch (Instruction::get_command_code(command->get_command_name())) {
+    Command command_code = Instruction::get_command_code(command->get_command_name());
+    switch (command_code) {
         case Command::HALT:
         {
             byte instr_descr = 0x00;
@@ -323,7 +314,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
 
         case Command::CALL:
         {
-            /* TODO */
+            return generate_machine_code_command_with_jump_operand1(command);
             break;
         }
 
@@ -340,39 +331,36 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         case Command::JNE:
         case Command::JGT:
         {
-            /* TODO */
+            return generate_machine_code_command_with_jump_operand1(command);
             break;
         }
 
         case Command::PUSH:
-        {
-            // str has form: str regD, operand; operand <= regD
-            // push r2 is like sp -= 2, str r2, [sp] => register indirect, dec by two before
-            byte instr_descr = 0xB0;
-
-            byte reg_ind_dst = get_register_index(command->get_operand1());
-            byte reg_ind_src = 6;  // sp
-            byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
-
-            byte update_nibble = UpdateMode::DECREMENT_BY_TWO_BEFORE;
-            byte addr_mode_nibble = AddressingMode::REGISTER_INDIRECT;
-            byte addr_mode = (update_nibble << 4) | addr_mode_nibble;
-
-            return { instr_descr, regs_descr, addr_mode };
-            break;
-        }
-
         case Command::POP:
         {
-            // ldr has form: ldr regD, operand; regD <= operand
-            // pop r2 is like ldr r2, [sp], sp += 2 => register indirect, inc by two after
-            byte instr_descr = 0xA0;
+            byte instr_descr;
+            if (command_code == Command::PUSH) {
+                // str has form: str regD, operand; operand <= regD
+                // push r2 is like sp -= 2, str r2, [sp] => register indirect, dec by two before
+                instr_descr = (byte)0xB0;
+            } else {
+                // ldr has form: ldr regD, operand; regD <= operand
+                // pop r2 is like ldr r2, [sp], sp += 2 => register indirect, inc by two after
+                instr_descr = (byte)0xA0;
+
+            }
 
             byte reg_ind_dst = get_register_index(command->get_operand1());
             byte reg_ind_src = 6;  // sp
             byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
 
-            byte update_nibble = UpdateMode::INCREMENT_BY_TWO_AFTER;
+            byte update_nibble;
+            if (command_code == Command::PUSH) {
+                update_nibble = UpdateMode::DECREMENT_BY_TWO_BEFORE;
+            } else {
+                update_nibble = UpdateMode::INCREMENT_BY_TWO_AFTER;
+            }
+
             byte addr_mode_nibble = AddressingMode::REGISTER_INDIRECT;
             byte addr_mode = (update_nibble << 4) | addr_mode_nibble;
 
@@ -416,7 +404,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         case Command::XOR:
         case Command::TEST:
         {
-            byte nibble_hi = 0x80;
+            byte nibble_hi = (byte)0x80;
             byte nibble_lo = get_lower_nibble_logical_operation(command);
             byte instr_descr = nibble_hi | nibble_lo;
 
@@ -434,7 +422,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         case Command::SHL:
         case Command::SHR:
         {
-            byte nibble_hi = 0x90;
+            byte nibble_hi = (byte)0x90;
             byte nibble_lo = get_lower_nibble_shift_operation(command);
             byte instr_descr = nibble_hi | nibble_lo;
 
@@ -449,12 +437,14 @@ vector<byte> TwoPassAssembler::generate_machine_code_command(shared_ptr<Instruct
         case Command::LDR:
         case Command::STR:
         {
-            /* TODO */
+            return generate_machine_code_command_with_data_operand2(command);
             break;
         }
 
         default:
-            throw logic_error("Logic error at line " + to_string(command->get_line()) + ": Command '" + command->get_command_name() + "' not recognized.");
+        {
+            throw logic_error("Logic error at line " + to_string(command->get_line()) + ": Command '" + command->get_command_name() + "' not recognized after syntax analysis.");
+        }
     }
 
     return  { };
@@ -496,7 +486,7 @@ byte TwoPassAssembler::get_lower_nibble_arithmetic_operation(shared_ptr<Instruct
         return nibble_lo_cmp;
     }
 
-    throw logic_error("Instruction " + command_arithmetic->get_command_name() + " does not represent arithmetic instruction.");
+    throw logic_error("Logic error at line " + to_string(command_arithmetic->get_line()) + ": Instruction " + command_arithmetic->get_command_name() + " does not represent arithmetic instruction.");
 }
 
 byte TwoPassAssembler::get_lower_nibble_logical_operation(shared_ptr<Instruction> command_logical) const {
@@ -519,7 +509,7 @@ byte TwoPassAssembler::get_lower_nibble_logical_operation(shared_ptr<Instruction
         return nibble_lo_test;
     }
 
-    throw logic_error("Instruction " + command_logical->get_command_name() + " does not represent logical instruction.");
+    throw logic_error("Logic error at line " + to_string(command_logical->get_line()) + ": Instruction " + command_logical->get_command_name() + " does not represent logical instruction.");
 }
 
 byte TwoPassAssembler::get_lower_nibble_shift_operation(shared_ptr<Instruction> command_shift) const {
@@ -533,7 +523,202 @@ byte TwoPassAssembler::get_lower_nibble_shift_operation(shared_ptr<Instruction> 
         return nibble_lo_shr;
     }
 
-    throw logic_error("Instruction " + command_shift->get_command_name() + " does not represent shift instruction.");
+    throw logic_error("Logic error at line " + to_string(command_shift->get_line()) + ": Instruction " + command_shift->get_command_name() + " does not represent shift instruction.");
+}
+
+vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(shared_ptr<Instruction> command) const {
+    return { };
+}
+
+vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(shared_ptr<Instruction> command) const {
+    Command command_code = Instruction::get_command_code(command->get_command_name());
+
+    byte instr_descr;
+    if (command_code == Command::LDR) {
+        instr_descr = (byte)0xA0;
+    } else {
+        // Command::STR
+        instr_descr = (byte)0xB0;
+    }
+
+    byte reg_ind_dst = 0;
+    byte reg_ind_src = 0;
+
+    byte update_nibble = 0;
+    byte addr_mode_nibble = 0;
+
+    byte data_high = 0, data_low = 0;
+
+    smatch sm;
+    string operand2 = command->get_operand2();
+    if (regex_match(operand2, sm, regex("\\$" + parser->literal))) {
+        // Immediate
+        reg_ind_dst = get_register_index(command->get_operand1());
+        reg_ind_src = 0x0F;
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::IMMEDIATE;
+
+        int value = stoi(sm[1], nullptr, 0);
+        data_high = (value >> 8) & 0xFF;
+        data_low = value & 0xFF;
+
+    } else if (regex_match(operand2, sm, regex("\\$" + parser->symbol))) {
+        if (sm[1].matched && !parser->is_register(sm[1])) {
+            // Immediate
+            reg_ind_dst = get_register_index(command->get_operand1());
+            reg_ind_src = 0x0F;
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::IMMEDIATE;
+
+            string symbol = sm[1];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else if (regex_match(operand2, sm, regex(parser->literal))) {
+        // Memory direct
+        reg_ind_dst = get_register_index(command->get_operand1());
+        reg_ind_src = 0x0F;
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::DIRECT_MEMORY;
+
+        int value = stoi(sm[1], nullptr, 0);
+        data_high = (value >> 8) & 0xFF;
+        data_low = value & 0xFF;
+
+    } else if (regex_match(operand2, sm, regex(parser->reg))) {
+        // Register direct
+        reg_ind_dst = get_register_index(command->get_operand1());
+        reg_ind_src = get_register_index(sm[1]);
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::REGISTER_DIRECT;
+
+    } else if (regex_match(operand2, sm, regex(parser->symbol))) {
+        if (sm[1].matched && !parser->is_register(sm[1])) {
+            // Memory direct
+            reg_ind_dst = get_register_index(command->get_operand1());
+            reg_ind_src = 0x0F;
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::DIRECT_MEMORY;
+
+            string symbol = sm[1];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else if (regex_match(operand2, sm, regex("%" + parser->symbol))) {
+        if (sm[1].matched && !parser->is_register(sm[1])) {
+            // Register indirect with displacement
+            reg_ind_dst = get_register_index(command->get_operand1());
+            reg_ind_src = 7;  // pc
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+
+            string symbol = sm[1];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else if (regex_match(operand2, sm, regex("\\[\\s*" + parser->reg + "\\s*\\]"))) {
+        // Register indirect
+        reg_ind_dst = get_register_index(command->get_operand1());
+        reg_ind_src = get_register_index(sm[1]);
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::REGISTER_INDIRECT;
+
+    } else if (regex_match(operand2, sm, regex("\\[\\s*" + parser->reg + "\\s* \\+ \\s*" + parser->literal + "\\s*\\]"))) {
+        // Register indirect with displacement
+        reg_ind_dst = get_register_index(command->get_operand1());
+        reg_ind_src = get_register_index(sm[1]);
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+
+        int value = stoi(sm[2], nullptr, 0);
+        data_high = (value >> 8) & 0xFF;
+        data_low = value & 0xFF;
+
+    } else if (regex_match(operand2, sm, regex("\\[\\s*" + parser->reg + "\\s* \\+ \\s*" + parser->symbol + "\\s*\\]"))) {
+        if (sm[2].matched && !parser->is_register(sm[2])) {
+            // Register indirect with displacement
+            reg_ind_dst = get_register_index(command->get_operand1());
+            reg_ind_src = get_register_index(sm[1]);
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+
+            string symbol = sm[2];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else {
+        throw logic_error("Logic error at line " + to_string(command->get_line()) + ": Addressing mode not recognized after syntax analysis.");
+    }
+
+    byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+    byte addr_mode = (update_nibble << 4) | addr_mode_nibble;
+
+    if (command->get_size() == 3) {
+        return { instr_descr, regs_descr, addr_mode };
+    } else {
+        return { instr_descr, regs_descr, addr_mode, data_high, data_low };
+    }
 }
 
 vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instruction> directive) const {

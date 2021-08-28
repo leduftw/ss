@@ -1,4 +1,5 @@
 #include "instruction.hpp"
+#include "parser.hpp"
 
 unordered_map<string, Command> Instruction::command_code({
     { "halt", Command::HALT },
@@ -73,100 +74,4 @@ ostream& operator<<(ostream& os, const Instruction& i) {
     }
 
     return os;
-}
-
-void Instruction::calculate_size() {
-    if (directive) {
-        if (directive_name == "word") {
-            // Every argument takes 2 bytes
-            size = directive_args.size() * 2;
-            return;
-        }
-
-        if (directive_name == "skip") {
-            size = stoi(directive_args[0], nullptr, 0);
-            return;
-        }
-
-        // Only .word and .skip directive increment location counter
-        size = 0;
-        return;
-    }
-
-    // Instruction is command
-    switch (get_command_code(command_name)) {
-        case Command::HALT:
-            size = 1;
-            break;
-
-        case Command::INT:
-            size = 2;
-            break;
-
-        case Command::IRET:
-            size = 1;
-            break;
-
-        case Command::CALL:
-            /* TODO */
-            // 3 or 5 bytes
-            size = 3;
-            break;
-
-        case Command::RET:
-            size = 1;
-            break;
-
-        case Command::JMP:
-        case Command::JEQ:
-        case Command::JNE:
-        case Command::JGT:
-            /* TODO */
-            // 3 or 5 bytes
-            size = 3;
-            break;
-
-        case Command::PUSH:
-        case Command::POP:
-            // They are encoded via str and ldr
-            size = 3;
-            break;
-
-        case Command::XCHG:
-            size = 2;
-            break;
-
-        case Command::ADD:
-        case Command::SUB:
-        case Command::MUL:
-        case Command::DIV:
-        case Command::CMP:
-            size = 2;
-            break;
-
-        case Command::NOT:
-        case Command::AND:
-        case Command::OR:
-        case Command::XOR:
-        case Command::TEST:
-            size = 2;
-            break;
-
-        case Command::SHL:
-        case Command::SHR:
-            size = 2;
-            break;
-
-        case Command::LDR:
-            /* TODO */
-            // 3 or 5 bytes
-            size = 5;
-            break;
-
-        case Command::STR:
-            /* TODO */
-            // 3 or 5 bytes
-            size = 5;
-            break;
-    }
 }

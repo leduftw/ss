@@ -1,26 +1,18 @@
 Symbol table
 ============
 Name      Value     Section   Global    Entry     
-a         16        ABS       1         1         
-b         10        ABS       1         2         
-.text     0         .text     0         3         
-.bss      0         .bss      0         4         
-.data     0         .data     0         5         
+a         16        ABS       0         1         
+.text     0         .text     0         2         
 
 Sections
 ========
 .section .text
-0x0000: 70 06 83 13 b0 26 12 a0
-0x0008: 26 42
-
-.section .bss
-0x0000: 00 00 00 00 00 00 00 00
-0x0008: 00 00 00 00 00 00 00 00
-0x0010: 00 00 00 00 00 00 00 00
-0x0018: 00 00 00 00 00 00 00 00
-
-.section .data
-0x0000: 10 00 0b 00 0a 00
+0x0000: a0 1f 00 00 64 a0 1f 00
+0x0008: 00 10 a0 1f 04 01 00 a0
+0x0010: 1f 04 00 10 a0 17 03 00
+0x0018: 10 a0 12 01 a0 16 02 a0
+0x0020: 18 02 a0 12 02 a0 12 03
+0x0028: 00 64 a0 12 03 00 10
 
 Relocation records
 ==================

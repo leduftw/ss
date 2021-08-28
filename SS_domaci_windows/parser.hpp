@@ -9,22 +9,21 @@
 
 #include "instruction.hpp"
 #include "syntax_error.hpp"
+#include "two_pass_assembler.hpp"
 
 using namespace std;
 
+typedef int8_t byte;
+
 class Parser {
+
+    static string literal;
+    static string symbol;
+    static string reg;
 
     ifstream& input_file;
 
     int cur_line = 0;
-
-    string literal = "(?:(?:0x)|(?:0X))?(\\d+)";
-    //string literal = "(\\d+)";
-
-    // Warning: Following regex can also match registers, that's why we need additional processing if we get a match
-    string symbol = "([\\.A-Za-z_][\\.A-Za-z0-9_]*)";
-
-    string reg = "(?:(?:r[0-7])|(?:sp)|(?:pc)|(?:psw))";
 
     regex operation_regex;
     regex directive_regex;
@@ -47,14 +46,17 @@ class Parser {
 
 public:
 
+    friend class TwoPassAssembler;
+    friend class Instruction;
+
+    static bool is_symbol(string s);
+    static bool is_literal(string s);
+    static bool is_register(string s);
+    static pair<bool, byte> is_operand(string s, bool is_jump);
+
     Parser(ifstream& in);
 
     shared_ptr<Instruction> get_next_instruction();
-
-    bool is_symbol(string s);
-    bool is_literal(string s);
-    bool is_register(string s);
-    bool is_operand(string s, bool is_jump);
 };
 
 #endif

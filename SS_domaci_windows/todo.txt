@@ -2,8 +2,3 @@
 
 - addressing modes code generation
 - relocation records generation
-
-- Moskva
-- Veljko Djorovic
-
-is sp == r6?

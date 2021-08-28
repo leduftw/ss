@@ -20,6 +20,8 @@ struct AddressingMode {
     static const byte REGISTER_INDIRECT_WITH_DISPLACEMENT = 0x3;
     static const byte DIRECT_MEMORY = 0x4;
     static const byte REGISTER_DIRECT_WITH_OPERAND = 0x5;  // when is this used?
+
+    static const byte ERROR = -1;
 };
 
 struct UpdateMode {
@@ -68,6 +70,9 @@ class TwoPassAssembler : public Assembler {
     vector<byte> generate_machine_code_instruction(shared_ptr<Instruction> instruction) const;
 
     vector<byte> generate_machine_code_command(shared_ptr<Instruction> command) const;
+    vector<byte> generate_machine_code_command_with_jump_operand1(shared_ptr<Instruction> command) const;
+    vector<byte> generate_machine_code_command_with_data_operand2(shared_ptr<Instruction> command) const;
+
     vector<byte> generate_machine_code_directive(shared_ptr<Instruction> directive) const;
 
     byte get_register_index(string reg) const;

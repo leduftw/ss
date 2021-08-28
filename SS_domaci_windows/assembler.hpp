@@ -13,6 +13,8 @@
 
 using namespace std;
 
+class Parser;
+
 class Assembler {
 
 protected:
