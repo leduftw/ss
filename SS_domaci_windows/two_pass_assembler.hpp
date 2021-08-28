@@ -80,6 +80,8 @@ class TwoPassAssembler : public Assembler {
     byte get_lower_nibble_logical_operation(shared_ptr<Instruction> command_logical) const;
     byte get_lower_nibble_shift_operation(shared_ptr<Instruction> command_shift) const;
 
+    byte get_lower_nibble_jump_command(shared_ptr<Instruction> command_shift) const;
+
 protected:
 
     /*

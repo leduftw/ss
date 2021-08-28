@@ -486,7 +486,7 @@ byte TwoPassAssembler::get_lower_nibble_arithmetic_operation(shared_ptr<Instruct
         return nibble_lo_cmp;
     }
 
-    throw logic_error("Logic error at line " + to_string(command_arithmetic->get_line()) + ": Instruction " + command_arithmetic->get_command_name() + " does not represent arithmetic instruction.");
+    throw logic_error("Logic error at line " + to_string(command_arithmetic->get_line()) + ": Instruction " + command_name + " does not represent arithmetic instruction.");
 }
 
 byte TwoPassAssembler::get_lower_nibble_logical_operation(shared_ptr<Instruction> command_logical) const {
@@ -509,7 +509,7 @@ byte TwoPassAssembler::get_lower_nibble_logical_operation(shared_ptr<Instruction
         return nibble_lo_test;
     }
 
-    throw logic_error("Logic error at line " + to_string(command_logical->get_line()) + ": Instruction " + command_logical->get_command_name() + " does not represent logical instruction.");
+    throw logic_error("Logic error at line " + to_string(command_logical->get_line()) + ": Instruction " + command_name + " does not represent logical instruction.");
 }
 
 byte TwoPassAssembler::get_lower_nibble_shift_operation(shared_ptr<Instruction> command_shift) const {
@@ -523,11 +523,226 @@ byte TwoPassAssembler::get_lower_nibble_shift_operation(shared_ptr<Instruction> 
         return nibble_lo_shr;
     }
 
-    throw logic_error("Logic error at line " + to_string(command_shift->get_line()) + ": Instruction " + command_shift->get_command_name() + " does not represent shift instruction.");
+    throw logic_error("Logic error at line " + to_string(command_shift->get_line()) + ": Instruction " + command_name + " does not represent shift instruction.");
 }
 
 vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(shared_ptr<Instruction> command) const {
-    return { };
+    Command command_code = Instruction::get_command_code(command->get_command_name());
+
+    byte instr_descr;
+    switch (command_code) {
+        case Command::CALL:
+        {
+            instr_descr = 0x30;
+            break;
+        }
+
+        case Command::JMP:
+        case Command::JEQ:
+        case Command::JNE:
+        case Command::JGT:
+        {
+            byte nibble_hi = 0x50;
+            byte nibble_lo = get_lower_nibble_jump_command(command);
+            instr_descr = nibble_hi | nibble_lo;
+            break;
+        }
+
+        default:
+        {
+            throw logic_error("Logic error at line " + to_string(command->get_line()) + ": generate_machine_code_command_with_jump_operand1() called, but command is not jump instruction.");
+        }
+    }
+
+    byte reg_ind_dst = 0x0F;
+    byte reg_ind_src = 0;
+
+    byte update_nibble = 0;
+    byte addr_mode_nibble = 0;
+
+    byte data_high = 0, data_low = 0;
+
+    smatch sm;
+    string operand1 = command->get_operand1();
+    if (regex_match(operand1, sm, regex(parser->literal))) {
+        // Immediate
+        reg_ind_src = 0x0F;
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::IMMEDIATE;
+
+        int value = stoi(sm[1], nullptr, 0);
+        data_high = (value >> 8) & 0xFF;
+        data_low = value & 0xFF;
+
+    } else if (regex_match(operand1, sm, regex(parser->symbol))) {
+        if (sm[1].matched && !parser->is_register(sm[1])) {
+            // Immediate
+            reg_ind_src = 0x0F;
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::IMMEDIATE;
+
+            string symbol = sm[1];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else if (regex_match(operand1, sm, regex("%" + parser->symbol))) {
+        if (sm[1].matched && !parser->is_register(sm[1])) {
+            // Register indirect with displacement
+            reg_ind_src = 7;  // pc
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+
+            string symbol = sm[1];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else if (regex_match(operand1, sm, regex("\\*" + parser->reg))) {
+        // Register direct
+        reg_ind_src = get_register_index(sm[1]);
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::REGISTER_DIRECT;
+
+    } else if (regex_match(operand1, sm, regex("\\*" + parser->literal))) {
+        // Memory direct
+        reg_ind_src = 0x0F;
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::DIRECT_MEMORY;
+
+        int value = stoi(sm[1], nullptr, 0);
+        data_high = (value >> 8) & 0xFF;
+        data_low = value & 0xFF;
+
+    } else if (regex_match(operand1, sm, regex("\\*" + parser->symbol))) {
+        if (sm[1].matched && !parser->is_register(sm[1])) {
+            // Memory direct
+            reg_ind_src = 0x0F;
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::DIRECT_MEMORY;
+
+            string symbol = sm[1];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else if (regex_match(operand1, sm, regex("\\*\\[\\s*" + parser->reg + "\\s*\\]"))) {
+        // Register indirect
+        reg_ind_src = get_register_index(sm[1]);
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::REGISTER_INDIRECT;
+
+    } else if (regex_match(operand1, sm, regex("\\*\\[\\s*" + parser->reg + "\\s* \\+ \\s*" + parser->literal + "\\s*\\]"))) {
+        // Register indirect with displacement
+        reg_ind_src = get_register_index(sm[1]);
+
+        update_nibble = UpdateMode::NO_UPDATE;
+        addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+
+        int value = stoi(sm[2], nullptr, 0);
+        data_high = (value >> 8) & 0xFF;
+        data_low = value & 0xFF;
+
+    } else if (regex_match(operand1, sm, regex("\\*\\[\\s*" + parser->reg + "\\s* \\+ \\s*" + parser->symbol + "\\s*\\]"))) {
+        if (sm[2].matched && !parser->is_register(sm[2])) {
+            // Register indirect with displacement
+            reg_ind_src = get_register_index(sm[1]);
+
+            update_nibble = UpdateMode::NO_UPDATE;
+            addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+
+            string symbol = sm[2];
+            if (!symbol_table->contains(symbol)) {
+                throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
+            }
+
+            int value = -4;
+            auto symbol_info = symbol_table->get(symbol);
+            if (symbol_info->is_defined) {
+                value = symbol_info->value;
+            } else {
+                //create_relocation_record();
+            }
+
+            data_high = (value >> 8) & 0xFF;
+            data_low = value & 0xFF;
+        }
+
+    } else {
+        throw logic_error("Logic error at line " + to_string(command->get_line()) + ": Addressing mode not recognized after syntax analysis.");
+    }
+
+    byte regs_descr = (reg_ind_dst << 4) | reg_ind_src;
+    byte addr_mode = (update_nibble << 4) | addr_mode_nibble;
+
+    if (command->get_size() == 3) {
+        return { instr_descr, regs_descr, addr_mode };
+    } else {
+        return { instr_descr, regs_descr, addr_mode, data_high, data_low };
+    }
+}
+
+byte TwoPassAssembler::get_lower_nibble_jump_command(shared_ptr<Instruction> command_jump) const {
+    byte nibble_lo_jmp = 0x0;
+    byte nibble_lo_jeq = 0x1;
+    byte nibble_lo_jne = 0x2;
+    byte nibble_lo_jgt = 0x3;
+
+    string command_name = command_jump->get_command_name();
+    if (command_name == "jmp") {
+        return nibble_lo_jmp;
+    } else if (command_name == "jeq") {
+        return nibble_lo_jeq;
+    } else if (command_name == "jne") {
+        return nibble_lo_jne;
+    } else if (command_name == "jgt") {
+        return nibble_lo_jgt;
+    }
+
+    throw logic_error("Logic error at line " + to_string(command_jump->get_line()) + ": Instruction " + command_name + " does not represent jump instruction.");
 }
 
 vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(shared_ptr<Instruction> command) const {

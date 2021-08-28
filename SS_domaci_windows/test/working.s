@@ -1,6 +1,20 @@
 .equ a, 0x10
 
 .section .text
+	jmp 100
+	jmp a
+	jmp *0x100
+	jmp *a
+	jmp %a
+	jgt *r1
+	jne *[psw]
+	jeq *[r4 + 0X100]
+	call *[r3 + a]
+	
+.end
+###########################
+
+.section .text
 	ldr r1, $100
 	ldr r1, $a
 	ldr r1, 0x100
@@ -13,6 +27,7 @@
 	ldr r1, [r2 + 100]
 	ldr r1, [r2 + a]	
 .end
+###########################
 
 .equ a, 0x10
 
@@ -44,6 +59,7 @@
 	.word a, 11, b
 	
 .end
+###########################
 
 neposredno => 5 bajtova
 memorijsko direktno => 5 bajtova
