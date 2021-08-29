@@ -28,12 +28,30 @@ public:
         shared_ptr<Section> section = nullptr;
         bool is_defined = false;
         bool is_global = false;
+        bool is_external = false;
         SymbolType symbol_type = SymbolType::UNDEFINED;
 
         int entry_number = -1;
     };
 
     friend ostream& operator<<(ostream& os, const SymbolTable& symbol_table);
+
+    SymbolTable() {
+        string section_name = "UND";
+        auto symbol_info = make_shared<SymbolInfo>();
+        symbol_info->value = 0;
+
+        und_section = make_shared<Section>(section_name);
+        symbol_info->section = und_section;
+
+        symbol_info->is_defined = true;
+        symbol_info->is_global = false;
+        symbol_info->is_external = false;
+        symbol_info->symbol_type = SymbolType::SECTION_NAME;
+        symbol_info->entry_number = 0;
+
+        insert(section_name, symbol_info);
+    }
 
     bool contains(string symbol) const {
         return symbols.find(symbol) != symbols.end();
@@ -47,11 +65,18 @@ public:
         return symbols[key];
     }
 
+    shared_ptr<Section> get_und_section() const {
+        return und_section;
+    }
+
     size_t get_size() const {
         return symbols.size();
     }
 
 private:
+
+    shared_ptr<Section> und_section;
+
     unordered_map<string, shared_ptr<SymbolInfo>> symbols;
 
     void print_header(ostream& os) const;

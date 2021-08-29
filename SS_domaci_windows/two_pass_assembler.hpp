@@ -19,7 +19,7 @@ struct AddressingMode {
     static const byte REGISTER_INDIRECT = 0x2;
     static const byte REGISTER_INDIRECT_WITH_DISPLACEMENT = 0x3;
     static const byte DIRECT_MEMORY = 0x4;
-    static const byte REGISTER_DIRECT_WITH_OPERAND = 0x5;  // when is this used?
+    static const byte REGISTER_DIRECT_WITH_OPERAND = 0x5;  // used in jump instructions with operand %symbol
 
     static const byte ERROR = -1;
 };

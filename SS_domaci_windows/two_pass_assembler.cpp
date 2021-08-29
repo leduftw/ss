@@ -101,6 +101,10 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
             if (section_name != symbol_info->section->get_section_name()) {
                 throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is already defined.");
             } else {
+                if (symbol_info->is_external) {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is marked as external, it cannot be defined in this file.");
+                }
+
                 if (!continuation_of_section) {
                     sections.push_back(current_section);
                 }
@@ -121,8 +125,9 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
             symbol_info->section = current_section;
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
+            symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::SECTION_NAME;
-            symbol_info->entry_number = symbol_table->get_size() + 1;
+            symbol_info->entry_number = symbol_table->get_size();
 
             symbol_table->insert(section_name, symbol_info);
         }
@@ -137,18 +142,24 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + symbol_name + "' is already defined.");
             }
 
+            if (symbol_info->is_external) {
+                throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + symbol_name + "' is marked as external, it cannot be defined in this file.");
+            }
+
             symbol_info->value = stoi(args[1], nullptr, 0);
             symbol_info->is_defined = true;
             symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
 
         } else {
-            // Other fields are not important
             auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
             // Third argument 0 means that it should automatically deduce base
             symbol_info->value = stoi(args[1], nullptr, 0);
+            symbol_info->section = nullptr;  // ABS
             symbol_info->is_defined = true;
+            symbol_info->is_global = false;
+            symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
-            symbol_info->entry_number = symbol_table->get_size() + 1;
+            symbol_info->entry_number = symbol_table->get_size();
 
             symbol_table->insert(symbol_name, symbol_info);
         }
@@ -158,16 +169,21 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
         for (string& arg : args) {
             if (symbol_table->contains(arg)) {
                 auto symbol_info = symbol_table->get(arg);
-                if (!symbol_info->is_global) {
-                    symbol_info->is_global = true;
-                } else {
+                if (symbol_info->is_global) {
                     throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
+
+                } else if (symbol_info->is_external) {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is marked as external, which means it is already global.");
+
+                } else {
+                    symbol_info->is_global = true;
                 }
 
             } else {
                 auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
+                symbol_info->section = symbol_table->get_und_section();
                 symbol_info->is_global = true;
-                symbol_info->entry_number = symbol_table->get_size() + 1;
+                symbol_info->entry_number = symbol_table->get_size();
 
                 symbol_table->insert(arg, symbol_info);
             }
@@ -180,14 +196,17 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 auto symbol_info = symbol_table->get(arg);
                 if (!symbol_info->is_global) {
                     symbol_info->is_global = true;
+                    symbol_info->is_external = true;
                 } else {
                     throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
                 }
 
             } else {
                 auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
+                symbol_info->section = symbol_table->get_und_section();
                 symbol_info->is_global = true;
-                symbol_info->entry_number = symbol_table->get_size() + 1;
+                symbol_info->is_external = true;
+                symbol_info->entry_number = symbol_table->get_size();
 
                 symbol_table->insert(arg, symbol_info);
             }
@@ -211,8 +230,9 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
             symbol_info->section = current_section;
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
+            symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::LABEL;
-            symbol_info->entry_number = symbol_table->get_size() + 1;
+            symbol_info->entry_number = symbol_table->get_size();
 
             symbol_table->insert(label, symbol_info);
 
@@ -220,6 +240,10 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
             auto symbol_info = symbol_table->get(label);
             if (symbol_info->is_defined) {
                 throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Symbol '" + label + "' is already defined.");
+            }
+
+            if (symbol_info->is_external) {
+                throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Symbol '" + label + "' is marked as external, it cannot be defined in this file.");
             }
 
             symbol_info->value = current_section->get_location_counter();
@@ -606,7 +630,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(
             reg_ind_src = 7;  // pc
 
             update_nibble = UpdateMode::NO_UPDATE;
-            addr_mode_nibble = AddressingMode::REGISTER_INDIRECT_WITH_DISPLACEMENT;
+            addr_mode_nibble = AddressingMode::REGISTER_DIRECT_WITH_OPERAND;
 
             string symbol = sm[1];
             if (!symbol_table->contains(symbol)) {
