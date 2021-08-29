@@ -1,16 +1,35 @@
 Symbol table
 ============
-Name      Value     Section   Global    Entry     
-a         16        ABS       0         1         
-.text     0         .text     0         2         
+Name              Value             Section           Global            Entry             
+UND               0                 UND               0                 0                 
+local_equ_symbol  65                ABS               0                 1                 
+local_label       5                 text              0                 7                 
+data              0                 data              1                 4                 
+global_equ_symbol 55                ABS               1                 2                 
+global_label      10                text              1                 3                 
+ex_symbol         -1                UND               1                 5                 
+text              0                 text              0                 6                 
 
 Sections
 ========
-.section .text
-0x0000: 50 ff 00 00 64 50 ff 00
-0x0008: 00 10 50 ff 04 01 00 50
-0x0010: ff 04 00 10 50 f7 05 00
-0x0018: 10 53 f1 01 52 f8 02 51
-0x0020: f4 03 01 00 30 f3 03 00
-0x0028: 10
+.section text
+0x0000: a0 11 03 00 41 a0 11 03
+0x0008: 00 37 a0 11 03 00 05 a0
+0x0010: 11 03 00 00 a0 17 03 ff
+0x0018: fe a0 11 03 00 00 a0 11
+0x0020: 03 00 00
+
+.section data
+0x0000: 00 00 00 00 00 00 00 00
+0x0008: 00 00 00 00
+
+Relocation records
+==================
+.rel.text
+Offset      Type            Entry           
+0x000d      R_HYPO_16       6               
+0x0012      R_HYPO_16       3               
+0x0017      R_HYPO_PC16     5               
+0x001c      R_HYPO_16       6               
+0x0021      R_HYPO_16       4               
 

@@ -41,3 +41,12 @@ string Utils::trim_string(string s) {
 
     return s;
 }
+
+string Utils::int_to_hex(int i) {
+    stringstream stream;
+    stream << "0x"
+        << setfill('0') << setw(4)
+        << hex << i;
+
+    return stream.str();
+}

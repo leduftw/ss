@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <iomanip>
+#include <sstream>
 #include <memory>
 #include <unordered_map>
 
@@ -24,6 +26,7 @@ public:
     struct RelocationRecord {
         // What?
         string symbol_name = "";
+        size_t entry = 0;
 
         // Where?
         shared_ptr<Section> section;
@@ -31,8 +34,6 @@ public:
 
         // How?
         RelocationType relocation_type = RelocationType::UNDEFINED;
-
-        size_t entry = 0;
     };
 
     friend ostream& operator<<(ostream& os, const RelocationTable& rt);

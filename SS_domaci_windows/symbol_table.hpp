@@ -73,14 +73,18 @@ public:
         return symbols.size();
     }
 
+    pair<string, shared_ptr<SymbolInfo>> get_symbol_by_entry_number(size_t entry_no) const;
+
 private:
 
     shared_ptr<Section> und_section;
 
     unordered_map<string, shared_ptr<SymbolInfo>> symbols;
 
-    void print_header(ostream& os) const;
-    void print_content(ostream& os) const;
+    size_t get_max_width() const;
+
+    void print_header(ostream& os, size_t width) const;
+    void print_content(ostream&, size_t width) const;
 };
 
 #endif

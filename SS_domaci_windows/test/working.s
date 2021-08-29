@@ -1,3 +1,29 @@
+.equ local_equ_symbol, 65
+.equ global_equ_symbol, 55
+
+.global global_equ_symbol
+.global global_label
+.global data
+
+.extern ex_symbol
+
+.section text
+    ldr r1, [r1 + local_equ_symbol]  # no relocation
+    local_label: ldr r1, [r1 + global_equ_symbol] # no relocation
+
+    global_label: ldr r1, [r1 + local_label] # has relocation
+    ldr r1, [r1 + global_label] # has relocation
+
+    ldr r1, %ex_symbol # has relocation
+	
+	ldr r1, [r1 + text]  # has relocation
+	ldr r1, [r1 + data]  # has relocation
+
+.section data
+	.skip 12
+.end
+###########################
+
 .equ a, 0x10
 
 .section .text

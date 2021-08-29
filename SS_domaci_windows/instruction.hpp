@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <vector>
 #include <regex>
+#include <memory>
+
+#include "section.hpp"
 
 using namespace std;
 
@@ -52,6 +55,8 @@ enum class Directive {
     END,
 };
 
+class Section;
+
 class Instruction {
 
     static unordered_map<string, Command> command_code;
@@ -70,6 +75,9 @@ class Instruction {
     vector<string> directive_args;
 
     int size = -1;
+
+    // Section in which this instruction is placed, nullptr if it is some directive that can be outside of any section
+    shared_ptr<Section> section;
 
 public:
 
@@ -177,6 +185,14 @@ public:
 
     void set_size(int sz) {
         size = sz;
+    }
+
+    shared_ptr<Section> get_section() const {
+        return section;
+    }
+
+    void set_section(shared_ptr<Section> s) {
+        section = s;
     }
 };
 

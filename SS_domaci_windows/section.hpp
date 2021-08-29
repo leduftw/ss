@@ -14,6 +14,8 @@ using namespace std;
 typedef int8_t byte;
 typedef int16_t word;
 
+class Instruction;
+
 class Section {
 
     size_t location_counter = 0;

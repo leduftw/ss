@@ -3,6 +3,9 @@
 
 #include <string>
 #include <vector>
+#include <iomanip>
+#include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -19,6 +22,8 @@ public:
     static vector<string> split_string(string s, string delimiter);
 
     static string trim_string(string s);
+
+    static string int_to_hex(int i);
 };
 
 #endif

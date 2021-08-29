@@ -62,6 +62,7 @@ void TwoPassAssembler::first_pass() {
             ) {
 
             current_section->get_instructions().push_back(instruction);
+            instruction->set_section(current_section);
         }
 
         if (current_section) {
@@ -98,19 +99,29 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
         string section_name = directive->get_directive_args()[0];
         if (symbol_table->contains(section_name)) {
             auto symbol_info = symbol_table->get(section_name);
-            if (section_name != symbol_info->section->get_section_name()) {
+            if (section_name != symbol_info->section->get_section_name() && symbol_info->symbol_type != SymbolTable::SymbolType::UNDEFINED) {
                 throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is already defined.");
             } else {
                 if (symbol_info->is_external) {
                     throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + section_name + "' is marked as external, it cannot be defined in this file.");
                 }
 
-                if (!continuation_of_section) {
+                if (!continuation_of_section && current_section) {
                     sections.push_back(current_section);
                 }
 
                 continuation_of_section = true;
                 current_section = symbol_info->section;
+
+                if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                    continuation_of_section = false;
+                    current_section = make_shared<Section>(section_name);
+
+                    symbol_info->value = 0;
+                    symbol_info->section = current_section;
+                    symbol_info->is_defined = true;
+                    symbol_info->symbol_type = SymbolTable::SymbolType::SECTION_NAME;
+                }
             }
         } else {
             if (!continuation_of_section && current_section) {
@@ -192,16 +203,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
     } else if (directive_name == "extern") {
         vector<string>& args = directive->get_directive_args();
         for (string& arg : args) {
-            if (symbol_table->contains(arg)) {
-                auto symbol_info = symbol_table->get(arg);
-                if (!symbol_info->is_global) {
-                    symbol_info->is_global = true;
-                    symbol_info->is_external = true;
-                } else {
-                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
-                }
-
-            } else {
+            if (!symbol_table->contains(arg)) {
                 auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
                 symbol_info->section = symbol_table->get_und_section();
                 symbol_info->is_global = true;
@@ -209,6 +211,25 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 symbol_info->entry_number = symbol_table->get_size();
 
                 symbol_table->insert(arg, symbol_info);
+
+            } else {
+                /*
+                auto symbol_info = symbol_table->get(arg);
+                if (!symbol_info->is_global) {
+                    symbol_info->is_global = true;
+                    symbol_info->is_external = true;
+                } else {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
+                }
+                */
+
+                auto symbol_info = symbol_table->get(arg);
+
+                if (symbol_info->is_defined) {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already defined.");
+                } else if (symbol_info->is_external) {
+                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already marked as external.");
+                }
             }
         }
 
@@ -266,9 +287,10 @@ void TwoPassAssembler::second_pass() {
     cout << "Second pass...\n";
 
     for (auto& section : sections) {
-        section->reset_location_counter();
-        generate_machine_code_section(section);
-        section->set_machine_code_ready(true);
+        current_section = section;
+        current_section->reset_location_counter();
+        generate_machine_code_section(current_section);
+        current_section->set_machine_code_ready(true);
     }
 
     cout << "Second pass done. Generated machine code for each section.\n\n";
@@ -816,12 +838,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
                 value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[1], symbol_info, value, false);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -862,12 +893,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
                 value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[1], symbol_info, value, false);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -888,12 +928,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
-                value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
+                value = symbol_info->value - 2;  // -2 because pc points on next instruction
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[1], symbol_info, value, true);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[1], symbol_info, value, true);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[1], symbol_info, value, true);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -934,12 +983,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
                 value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[2], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[2], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[2], symbol_info, value, false);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -958,6 +1016,35 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(
     } else {
         return { instr_descr, regs_descr, addr_mode, data_high, data_low };
     }
+}
+
+void TwoPassAssembler::create_relocation_record(string symbol_name, shared_ptr<SymbolTable::SymbolInfo> symbol_info, int& value, bool pc_relative) const {
+    auto relocation_record = make_shared<RelocationTable::RelocationRecord>();
+
+    relocation_record->symbol_name = symbol_name;
+    if (symbol_info->is_global) {
+        relocation_record->entry = symbol_table->get(relocation_record->symbol_name)->entry_number;
+        value = 0;
+
+    } else {
+        relocation_record->entry = symbol_table->get(current_section->get_section_name())->entry_number;
+        value = symbol_info->value;
+    }
+
+    if (pc_relative) {
+        value -= 2;
+    }
+
+    relocation_record->section = current_section;
+    relocation_record->offset = current_section->get_location_counter() + 3;
+
+    if (pc_relative) {
+        relocation_record->relocation_type = RelocationTable::RelocationType::R_HYPO_PC16;
+    } else {
+        relocation_record->relocation_type = RelocationTable::RelocationType::R_HYPO_16;
+    }
+
+    relocation_table->insert(current_section->get_section_name(), relocation_record);
 }
 
 vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instruction> directive) const {
