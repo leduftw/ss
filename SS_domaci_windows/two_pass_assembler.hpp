@@ -83,7 +83,7 @@ class TwoPassAssembler : public Assembler {
 
     byte get_lower_nibble_jump_command(shared_ptr<Instruction> command_shift) const;
 
-    void create_relocation_record(string symbol_name, shared_ptr<SymbolTable::SymbolInfo> symbol_info, int& value, bool pc_relative) const;
+    void create_relocation_record(string symbol_name, shared_ptr<SymbolTable::SymbolInfo> symbol_info, int& value, bool pc_relative, int custom_offset = -1) const;
 
 protected:
 

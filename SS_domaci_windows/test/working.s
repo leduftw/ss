@@ -8,19 +8,21 @@
 .extern ex_symbol
 
 .section text
-    ldr r1, [r1 + local_equ_symbol]  # no relocation
-    local_label: ldr r1, [r1 + global_equ_symbol] # no relocation
+    jmp *[r1 + local_equ_symbol]  # no relocation
+    local_label: jmp *[r1 + global_equ_symbol]  # no relocation
 
-    global_label: ldr r1, [r1 + local_label] # has relocation
-    ldr r1, [r1 + global_label] # has relocation
+    global_label: jmp *[r1 + local_label]  # has relocation
+    jmp *[r1 + global_label]  # has relocation
 
-    ldr r1, %ex_symbol # has relocation
+    jmp *[r1 + ex_symbol]  # has relocation
 	
-	ldr r1, [r1 + text]  # has relocation
-	ldr r1, [r1 + data]  # has relocation
+	jmp *[r1 + text]  # has relocation
+	jmp *[r1 + data]  # has relocation
 
 .section data
 	.skip 12
+	.word local_equ_symbol, global_equ_symbol, local_label, global_label, ex_symbol, text, data
+
 .end
 ###########################
 

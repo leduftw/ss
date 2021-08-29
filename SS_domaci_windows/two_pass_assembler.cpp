@@ -634,12 +634,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
                 value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[1], symbol_info, value, false);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -659,12 +668,33 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
-                value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // Special case with R_HYPO_PC16_ABS relocation type
+                auto relocation_record = make_shared<RelocationTable::RelocationRecord>();
+                value = -2;
+
+                relocation_record->symbol_name = sm[1];;
+                relocation_record->entry = symbol_table->get(relocation_record->symbol_name)->entry_number;
+
+                relocation_record->section = current_section;
+                relocation_record->offset = current_section->get_location_counter() + 3;
+
+                relocation_record->relocation_type = RelocationTable::RelocationType::R_HYPO_PC16_ABS;
+
+                relocation_table->insert(current_section->get_section_name(), relocation_record);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[1], symbol_info, value, true);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[1], symbol_info, value, true);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[1], symbol_info, value, true);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -702,12 +732,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
                 value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[1], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[1], symbol_info, value, false);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -745,12 +784,21 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(
                 throw SemanticError("Semantic error at line " + to_string(command->get_line()) + ": Symbol '" + symbol + "' is neither defined nor marked as external.");
             }
 
-            int value = -4;
+            int value = 0;
             auto symbol_info = symbol_table->get(symbol);
-            if (symbol_info->is_defined) {
+
+            if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                // No relocation records
                 value = symbol_info->value;
-            } else {
-                //create_relocation_record();
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                create_relocation_record(sm[2], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                create_relocation_record(sm[2], symbol_info, value, false);
+
+            } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                // External symbol
+                create_relocation_record(sm[2], symbol_info, value, false);
             }
 
             data_high = (value >> 8) & 0xFF;
@@ -1018,7 +1066,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_data_operand2(
     }
 }
 
-void TwoPassAssembler::create_relocation_record(string symbol_name, shared_ptr<SymbolTable::SymbolInfo> symbol_info, int& value, bool pc_relative) const {
+void TwoPassAssembler::create_relocation_record(string symbol_name, shared_ptr<SymbolTable::SymbolInfo> symbol_info, int& value, bool pc_relative, int custom_offset) const {
     auto relocation_record = make_shared<RelocationTable::RelocationRecord>();
 
     relocation_record->symbol_name = symbol_name;
@@ -1036,7 +1084,12 @@ void TwoPassAssembler::create_relocation_record(string symbol_name, shared_ptr<S
     }
 
     relocation_record->section = current_section;
-    relocation_record->offset = current_section->get_location_counter() + 3;
+
+    if (custom_offset != -1) {
+        relocation_record->offset = custom_offset;
+    } else {
+        relocation_record->offset = current_section->get_location_counter() + 3;
+    }
 
     if (pc_relative) {
         relocation_record->relocation_type = RelocationTable::RelocationType::R_HYPO_PC16;
@@ -1059,19 +1112,33 @@ vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instru
         size_t idx = 0;
         vector<string>& args = directive->get_directive_args();
         for (string& arg : args) {
-            word data = 0;
+            int value = 0;
             if (parser->is_literal(arg)) {
-                data = stoi(arg, nullptr, 0);
+                value = stoi(arg, nullptr, 0);
             } else {
                 if (!symbol_table->contains(arg)) {
                     throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is undefined.");
                 }
 
                 auto symbol_info = symbol_table->get(arg);
-                data = symbol_info->value;
+
+                if (symbol_info->symbol_type == SymbolTable::SymbolType::EQU_SYMBOL) {
+                    // No relocation records
+                    value = symbol_info->value;
+                } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
+                    create_relocation_record(arg, symbol_info, value, false, current_section->get_location_counter() + idx);
+
+                } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
+                    create_relocation_record(arg, symbol_info, value, false, current_section->get_location_counter() + idx);
+
+                } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
+                    // External symbol
+                    create_relocation_record(arg, symbol_info, value, false, current_section->get_location_counter() + idx);
+                }
             }
 
             // Little-endian
+            word data = (word)value;
             code[idx++] = data & 0xFF;
             code[idx++] = (data >> 8) & 0xFF;
         }

@@ -42,7 +42,24 @@ void RelocationTable::print_content(ostream& os, const vector<shared_ptr<Relocat
         string off = Utils::int_to_hex(r->offset);
         os << left << setw(12) << hex << off;
 
-        string relocation_type = r->relocation_type == RelocationType::R_HYPO_PC16 ? "R_HYPO_PC16" : "R_HYPO_16";
+        string relocation_type;
+        switch (r->relocation_type) {
+            case RelocationTable::RelocationType::R_HYPO_16:
+                relocation_type = "R_HYPO_16";
+                break;
+
+            case RelocationTable::RelocationType::R_HYPO_PC16:
+                relocation_type = "R_HYPO_PC16";
+                break;
+
+            case RelocationTable::RelocationType::R_HYPO_PC16_ABS:
+                relocation_type = "R_HYPO_PC16_ABS";
+                break;
+
+            default:
+                break;
+        }
+
         os << left << setw(16) << relocation_type;
 
         os << left << setw(16) << r->entry;

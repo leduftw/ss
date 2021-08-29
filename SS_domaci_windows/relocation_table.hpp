@@ -19,8 +19,9 @@ public:
     enum class RelocationType {
         UNDEFINED,
 
-        R_HYPO_PC16,
         R_HYPO_16,
+        R_HYPO_PC16,
+        R_HYPO_PC16_ABS,  // for %symbol in jump instructions if the symbol is defined with equ directive
     };
 
     struct RelocationRecord {
