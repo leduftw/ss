@@ -1,4 +1,5 @@
 #include "symbol_table.hpp"
+#include "utils.h"
 
 ostream& operator<<(ostream& os, const SymbolTable& symbol_table) {
     // Backup
@@ -44,7 +45,12 @@ void SymbolTable::print_header(ostream& os, size_t width) const {
 void SymbolTable::print_content(ostream& os, size_t width) const {
     for (auto& p : symbols) {
         os << left << setw(width) << p.first;
-        os << left << setw(width) << p.second->value;
+
+        stringstream str_stream;
+        str_stream << "0x" << hex << p.second->value;
+        string val(str_stream.str());
+        os << left << setw(width) << val;
+
         os << left << setw(width) << (p.second->section ? p.second->section->get_section_name() : "ABS");
         os << left << setw(width) << p.second->is_global;
         os << left << setw(width) << p.second->entry_number;

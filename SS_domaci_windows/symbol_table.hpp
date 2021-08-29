@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <iomanip>
+#include <sstream>
 
 #include "section.hpp"
 
@@ -24,7 +25,7 @@ public:
     };
 
     struct SymbolInfo {
-        int value = -1;
+        int value = 0;
         shared_ptr<Section> section = nullptr;
         bool is_defined = false;
         bool is_global = false;

@@ -11,10 +11,10 @@
     jmp *[r1 + local_equ_symbol]  # no relocation
     local_label: jmp *[r1 + global_equ_symbol]  # no relocation
 
-    global_label: jmp *[r1 + local_label]  # has relocation
-    jmp *[r1 + global_label]  # has relocation
+    global_label: jmp %local_equ_symbol  # has relocation
+    jmp %global_equ_symbol  # has relocation
 
-    jmp *[r1 + ex_symbol]  # has relocation
+    jmp %local_label  # has relocation
 	
 	jmp *[r1 + text]  # has relocation
 	jmp *[r1 + data]  # has relocation

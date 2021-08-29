@@ -68,4 +68,6 @@ void RelocationTable::print_content(ostream& os, const vector<shared_ptr<Relocat
 
     // Restore
     os.copyfmt(init);
+
+    os << "\n";
 }
