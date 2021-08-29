@@ -44,7 +44,7 @@
     <ClInclude Include="assembler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils.h">
+    <ClInclude Include="utils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="two_pass_assembler.hpp">

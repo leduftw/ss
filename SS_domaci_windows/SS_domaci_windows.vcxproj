@@ -160,7 +160,7 @@
     <ClInclude Include="syntax_error.hpp" />
     <ClInclude Include="two_pass_assembler.hpp" />
     <ClInclude Include="usage_error.hpp" />
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="utils.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

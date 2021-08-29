@@ -1,5 +1,5 @@
 #include "symbol_table.hpp"
-#include "utils.h"
+#include "utils.hpp"
 
 ostream& operator<<(ostream& os, const SymbolTable& symbol_table) {
     // Backup

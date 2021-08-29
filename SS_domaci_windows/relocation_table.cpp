@@ -1,5 +1,5 @@
 #include "relocation_table.hpp"
-#include "utils.h"
+#include "utils.hpp"
 
 ostream& operator<<(ostream& os, const RelocationTable& rt) {
     for (auto& p : rt.records) {

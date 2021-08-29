@@ -1,5 +1,5 @@
 #include "parser.hpp"
-#include "utils.h"
+#include "utils.hpp"
 
 string Parser::literal = "((?:\\d+)|(?:0x\\d+)|(?:0X\\d+))";
 

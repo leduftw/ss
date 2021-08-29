@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils.hpp"
 
 string Utils::get_file_name_without_extension(string& file_name) {
     size_t last_index = file_name.find_last_of(".");

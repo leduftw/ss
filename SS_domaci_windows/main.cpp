@@ -2,7 +2,7 @@
 #include <memory>
 
 #include "two_pass_assembler.hpp"
-#include "utils.h"
+#include "utils.hpp"
 #include "usage_error.hpp"
 #include "syntax_error.hpp"
 
