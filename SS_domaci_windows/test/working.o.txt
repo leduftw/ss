@@ -37,10 +37,10 @@ Offset      Type            Entry
 
 .rel.data
 Offset      Type            Entry           
-0x0010      R_HYPO_16       4               
+0x0010      R_HYPO_16       6               
 0x0012      R_HYPO_16       3               
 0x0014      R_HYPO_16       5               
-0x0016      R_HYPO_16       4               
+0x0016      R_HYPO_16       6               
 0x0018      R_HYPO_16       4               
 
 

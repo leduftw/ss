@@ -1075,7 +1075,8 @@ void TwoPassAssembler::create_relocation_record(string symbol_name, shared_ptr<S
         value = 0;
 
     } else {
-        relocation_record->entry = symbol_table->get(current_section->get_section_name())->entry_number;
+        shared_ptr<Section> section_in_which_symbol_is_defined = symbol_table->get(symbol_name)->section;
+        relocation_record->entry = symbol_table->get(section_in_which_symbol_is_defined->get_section_name())->entry_number;
         value = symbol_info->value;
     }
 
