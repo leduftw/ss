@@ -1,3 +1,7 @@
-============================ SYMBOL TABLE ============================
-Name	Value	Section	Global	Entry
+Symbol table
+============
+Name       Value      Section    Global     Entry      
+UND        0x0        UND        0          0          
 
+Sections
+========

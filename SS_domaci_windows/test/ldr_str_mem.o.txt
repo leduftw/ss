@@ -13,33 +13,25 @@ UND               0x0               UND               0                 0
 Sections
 ========
 .section text
-0x0000: 50 f1 03 00 41 50 f1 03
-0x0008: 00 37 50 f7 05 ff fe 50
-0x0010: f7 05 ff fe 50 f7 05 00
-0x0018: 03 50 f1 03 00 00 50 f1
-0x0020: 03 00 00
+0x0000: a0 1f 04 00 41 a0 1f 04
+0x0008: 00 37 a0 1f 04 00 05 a0
+0x0010: 1f 04 00 00 a0 1f 04 00
+0x0018: 00 a0 1f 04 00 00 a0 1f
+0x0020: 04 00 00 a0 1f 04 00 64
+0x0028: a0 1f 04 01 0f a0 1f 04
+0x0030: 01 0f
 
 .section data
 0x0000: 00 00 00 00 00 00 00 00
-0x0008: 00 00 00 00 41 00 37 00
-0x0010: 05 00 00 00 00 00 00 00
-0x0018: 00 00
+0x0008: 00 00 00 00
 
 Relocation records
 ==================
-.rel.data
-Offset      Type            Entry           
-0x0010      R_HYPO_16       6               
-0x0012      R_HYPO_16       3               
-0x0014      R_HYPO_16       5               
-0x0016      R_HYPO_16       6               
-0x0018      R_HYPO_16       4               
-
 .rel.text
 Offset      Type            Entry           
-0x000d      R_HYPO_PC16_ABS 1               
-0x0012      R_HYPO_PC16_ABS 2               
-0x0017      R_HYPO_PC16     6               
+0x000d      R_HYPO_16       6               
+0x0012      R_HYPO_16       3               
+0x0017      R_HYPO_16       5               
 0x001c      R_HYPO_16       6               
 0x0021      R_HYPO_16       4               
 

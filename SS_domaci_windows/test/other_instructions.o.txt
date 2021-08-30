@@ -1,0 +1,15 @@
+Symbol table
+============
+Name       Value      Section    Global     Entry      
+data       0x0        data       0          1          
+UND        0x0        UND        0          0          
+
+Sections
+========
+.section data
+0x0000: 10 4f 20 40 b0 26 12 a0
+0x0008: 36 42 60 24 70 11 71 17
+0x0010: 72 44 73 11 74 78 80 1f
+0x0018: 81 22 82 34 83 11 84 45
+0x0020: 90 61 91 61 00
+

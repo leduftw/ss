@@ -1,0 +1,30 @@
+Symbol table
+============
+Name       Value      Section    Global     Entry      
+wait       0xa        myCode     0          5          
+tim_cfg    0xff10     ABS        0          4          
+myCode     0x0        myCode     0          3          
+myData     0x0        myData     0          6          
+myCounter  0x0        myData     1          2          
+myStart    0x0        myCode     1          1          
+UND        0x0        UND        0          0          
+
+Sections
+========
+.section myCode
+0x0000: a0 0f 00 00 01 b0 0f 04
+0x0008: ff 10 a0 0f 04 00 00 a0
+0x0010: 1f 00 00 05 74 01 52 ff
+0x0018: 00 00 0a 00
+
+.section myData
+0x0000: 00 00
+
+Relocation records
+==================
+.rel.myCode
+Offset      Type            Entry           
+0x000d      R_HYPO_16       2               
+0x0019      R_HYPO_16       3               
+
+
