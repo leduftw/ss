@@ -70,7 +70,7 @@ class Instruction {
     string operand1 = "";
     string operand2 = "";
     bool jump = false;
-    
+
     string directive_name = "";
     vector<string> directive_args;
 

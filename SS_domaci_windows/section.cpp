@@ -12,7 +12,7 @@ ostream& operator<<(ostream& os, const Section& s) {
     */
 
     size_t address = 0x0;
-    for (int i = 0; i < (int) s.machine_code.size(); i++) {
+    for (int i = 0; i < (int)s.machine_code.size(); i++) {
         if (address % 8 == 0) {
             if (address != 0) {
                 os << "\n";
