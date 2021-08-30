@@ -1,7 +1,7 @@
 #include "parser.hpp"
 #include "utils.hpp"
 
-string Parser::literal = "((?:\\d+)|(?:0x\\d+)|(?:0X\\d+))";
+string Parser::literal = "((?:\\d+)|(?:0x[\\dA-Fa-f]+)|(?:0X[\\dA-Fa-f]+))";
 
 // Warning: Following regex can also match registers, that's why we need additional processing if we get a match
 string Parser::symbol = "([\\.A-Za-z_][\\.A-Za-z0-9_]*)";
