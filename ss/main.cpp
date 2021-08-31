@@ -51,5 +51,6 @@ void process_input(int argc, char** argv, string& input_file_name, string& outpu
         input_file_name = string(argv[1]);
     }
 
-    input_file_name = "./test/" + input_file_name;
+    // If you just want input file name as argument without typing whole path, uncomment next line
+    //input_file_name = "./test/" + input_file_name;
 }

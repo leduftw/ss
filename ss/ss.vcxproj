@@ -24,6 +24,7 @@
     <ProjectGuid>{68ca2728-7504-4add-948d-4abfde920909}</ProjectGuid>
     <RootNamespace>SSdomaciwindows</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>ss</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
