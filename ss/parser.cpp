@@ -170,7 +170,7 @@ void Parser::check_syntax(shared_ptr<Instruction> instruction) {
                 break;
 
             case Directive::WORD:
-                instruction->set_size(instruction->get_directive_args().size() * 2);
+                instruction->set_size((int)instruction->get_directive_args().size() * 2);
                 check_syntax_directive_symbol_or_literal_list(instruction);
                 break;
 

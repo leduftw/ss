@@ -138,7 +138,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
             symbol_info->is_global = false;
             symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::SECTION_NAME;
-            symbol_info->entry_number = symbol_table->get_size();
+            symbol_info->entry_number = (int)symbol_table->get_size();
 
             symbol_table->insert(section_name, symbol_info);
         }
@@ -170,7 +170,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
             symbol_info->is_global = false;
             symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::EQU_SYMBOL;
-            symbol_info->entry_number = symbol_table->get_size();
+            symbol_info->entry_number = (int)symbol_table->get_size();
 
             symbol_table->insert(symbol_name, symbol_info);
         }
@@ -194,7 +194,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 auto symbol_info = make_shared<SymbolTable::SymbolInfo>();
                 symbol_info->section = symbol_table->get_und_section();
                 symbol_info->is_global = true;
-                symbol_info->entry_number = symbol_table->get_size();
+                symbol_info->entry_number = (int)symbol_table->get_size();
 
                 symbol_table->insert(arg, symbol_info);
             }
@@ -208,7 +208,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 symbol_info->section = symbol_table->get_und_section();
                 symbol_info->is_global = true;
                 symbol_info->is_external = true;
-                symbol_info->entry_number = symbol_table->get_size();
+                symbol_info->entry_number = (int)symbol_table->get_size();
 
                 symbol_table->insert(arg, symbol_info);
 
@@ -247,13 +247,13 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
     for (string& label : instruction->get_labels()) {
         if (!symbol_table->contains(label)) {
             shared_ptr<SymbolTable::SymbolInfo> symbol_info = make_shared<SymbolTable::SymbolInfo>();
-            symbol_info->value = current_section->get_location_counter();
+            symbol_info->value = (int)current_section->get_location_counter();
             symbol_info->section = current_section;
             symbol_info->is_defined = true;
             symbol_info->is_global = false;
             symbol_info->is_external = false;
             symbol_info->symbol_type = SymbolTable::SymbolType::LABEL;
-            symbol_info->entry_number = symbol_table->get_size();
+            symbol_info->entry_number = (int)symbol_table->get_size();
 
             symbol_table->insert(label, symbol_info);
 
@@ -267,7 +267,7 @@ void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruct
                 throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Symbol '" + label + "' is marked as external, it cannot be defined in this file.");
             }
 
-            symbol_info->value = current_section->get_location_counter();
+            symbol_info->value = (int)current_section->get_location_counter();
             symbol_info->section = current_section;
             symbol_info->is_defined = true;
             symbol_info->symbol_type = SymbolTable::SymbolType::LABEL;
@@ -680,7 +680,7 @@ vector<byte> TwoPassAssembler::generate_machine_code_command_with_jump_operand1(
                 relocation_record->entry = symbol_table->get(relocation_record->symbol_name)->entry_number;
 
                 relocation_record->section = current_section;
-                relocation_record->offset = current_section->get_location_counter() + 3;
+                relocation_record->offset = (int)current_section->get_location_counter() + 3;
 
                 relocation_record->relocation_type = RelocationTable::RelocationType::R_HYPO_PC16_ABS;
 
@@ -1089,7 +1089,7 @@ void TwoPassAssembler::create_relocation_record(string symbol_name, shared_ptr<S
     if (custom_offset != -1) {
         relocation_record->offset = custom_offset;
     } else {
-        relocation_record->offset = current_section->get_location_counter() + 3;
+        relocation_record->offset = (int)current_section->get_location_counter() + 3;
     }
 
     if (pc_relative) {
@@ -1127,14 +1127,14 @@ vector<byte> TwoPassAssembler::generate_machine_code_directive(shared_ptr<Instru
                     // No relocation records
                     value = symbol_info->value;
                 } else if (symbol_info->symbol_type == SymbolTable::SymbolType::LABEL) {
-                    create_relocation_record(arg, symbol_info, value, false, current_section->get_location_counter() + idx);
+                    create_relocation_record(arg, symbol_info, value, false, (int)(current_section->get_location_counter() + idx));
 
                 } else if (symbol_info->symbol_type == SymbolTable::SymbolType::SECTION_NAME) {
-                    create_relocation_record(arg, symbol_info, value, false, current_section->get_location_counter() + idx);
+                    create_relocation_record(arg, symbol_info, value, false, (int)(current_section->get_location_counter() + idx));
 
                 } else if (symbol_info->symbol_type == SymbolTable::SymbolType::UNDEFINED) {
                     // External symbol
-                    create_relocation_record(arg, symbol_info, value, false, current_section->get_location_counter() + idx);
+                    create_relocation_record(arg, symbol_info, value, false, (int)(current_section->get_location_counter() + idx));
                 }
             }
 
