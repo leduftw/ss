@@ -213,16 +213,6 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
                 symbol_table->insert(arg, symbol_info);
 
             } else {
-                /*
-                auto symbol_info = symbol_table->get(arg);
-                if (!symbol_info->is_global) {
-                    symbol_info->is_global = true;
-                    symbol_info->is_external = true;
-                } else {
-                    throw SemanticError("Semantic error at line " + to_string(directive->get_line()) + ": Symbol '" + arg + "' is already global.");
-                }
-                */
-
                 auto symbol_info = symbol_table->get(arg);
 
                 if (symbol_info->is_defined) {
@@ -239,7 +229,6 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
 }
 
 void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruction) {
-    // Label must be in section
     if (!current_section && instruction->has_label()) {
         throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Label must be placed inside a section.");
     }
@@ -300,13 +289,6 @@ void TwoPassAssembler::generate_machine_code_section(shared_ptr<Section> section
     int idx = 0;
     vector<byte>& section_machine_code = section->get_machine_code();
     for (auto& instruction : section->get_instructions()) {
-        /*
-        // Commands can only be in text section
-        if (instruction->is_command() && !section->is_text_section()) {
-            throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Commands must be placed inside text section.");
-        }
-        */
-
         vector<byte> instruction_machine_code = generate_machine_code_instruction(instruction);
         for (byte b : instruction_machine_code) {
             section_machine_code[idx++] = b;
@@ -1155,15 +1137,17 @@ void TwoPassAssembler::create_obj_file() {
     output_file << "============\n";
     output_file << *symbol_table << "\n";
 
-    output_file << "Sections\n";
-    output_file << "========\n";
-    for (auto& section : sections) {
-        output_file << *section << "\n\n";
+    if (!sections.empty()) {
+        output_file << "Sections\n";
+        output_file << "========\n";
+        for (auto& section : sections) {
+            output_file << *section << "\n\n";
+        }
     }
 
-    if (relocation_table->get_size() != 0) {
+    if (!relocation_table->empty()) {
         output_file << "Relocation records\n";
         output_file << "==================\n";
-        output_file << *relocation_table << "\n";
+        output_file << *relocation_table;
     }
 }

@@ -6,11 +6,6 @@ ostream& operator<<(ostream& os, const Section& s) {
         return os;
     }
 
-    /*
-    string b = s.machine_code.size() != 1 ? "bytes" : "byte";
-    os << "size: " << s.machine_code.size() << " " << b << "\n";
-    */
-
     size_t address = 0x0;
     for (int i = 0; i < (int)s.machine_code.size(); i++) {
         if (address % 8 == 0) {

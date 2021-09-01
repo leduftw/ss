@@ -48,6 +48,10 @@ public:
         return size;
     }
 
+    bool empty() const {
+        return get_size() == 0;
+    }
+
 private:
 
     size_t size = 0;
