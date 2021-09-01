@@ -40,9 +40,8 @@ void TwoPassAssembler::first_pass() {
 
     shared_ptr<Instruction> instruction;
     while (true) {
-        // Find first line which isn't empty and isn't comment-only
         // Parser by definition returns correct instruction (syntax-wise), throws error otherwise
-        while (!(instruction = parser->get_next_instruction()));
+        instruction = parser->get_next_instruction();
 
         if (instruction->is_directive() && instruction->get_directive_name() == "end") {
             break;

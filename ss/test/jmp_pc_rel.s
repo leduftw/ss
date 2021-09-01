@@ -1,3 +1,4 @@
+# file: jmp_pc_rel.s
 .equ local_equ_symbol, 65
 .equ global_equ_symbol, 55
 
@@ -9,7 +10,8 @@
 
 .section text
     jmp %local_equ_symbol
-    local_label: jmp %global_equ_symbol
+    local_label: 
+		jmp %global_equ_symbol
     global_label: jmp %local_label
     jmp %global_label
 

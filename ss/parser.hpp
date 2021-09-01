@@ -28,6 +28,7 @@ class Parser {
     regex operation_regex;
     regex directive_regex;
 
+    shared_ptr<Instruction> _get_next_instruction();
     shared_ptr<Instruction> build_instruction();
     void check_syntax(shared_ptr<Instruction> instruction);
 
