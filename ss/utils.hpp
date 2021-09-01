@@ -17,6 +17,8 @@ class Utils {
 
 public:
 
+    static void process_input(int argc, char** argv, string& input_file_name, string& output_file_name);
+
     static string get_file_name_without_extension(string& file_name);
 
     static vector<string> split_string(string s, string delimiter);

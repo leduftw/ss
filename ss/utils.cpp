@@ -1,4 +1,30 @@
 #include "utils.hpp"
+#include "usage_error.hpp"
+
+void Utils::process_input(int argc, char** argv, string& input_file_name, string& output_file_name) {
+    if (argc < 2 || argc > 4) {
+        throw UsageError();
+    }
+
+    if (string(argv[1]) == "-o") {
+        if (argc != 4) {
+            throw UsageError();
+        }
+
+        output_file_name = string(argv[2]);
+        input_file_name = string(argv[3]);
+
+    } else {
+        if (argc != 2) {
+            throw UsageError();
+        }
+
+        input_file_name = string(argv[1]);
+    }
+
+    // If you just want input file name as argument without typing whole path, uncomment next line
+    //input_file_name = "./test/" + input_file_name;
+}
 
 string Utils::get_file_name_without_extension(string& file_name) {
     size_t last_index = file_name.find_last_of(".");
