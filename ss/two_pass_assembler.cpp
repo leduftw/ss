@@ -4,8 +4,6 @@
 #include "semantic_error.hpp"
 
 void TwoPassAssembler::assemble(string input_file_name, string output_file_name) {
-    cout << "Assembling " + input_file_name + " in two passes.\n";
-
     input_file.open(input_file_name, ios::in);
     if (!input_file.is_open()) {
         throw FileError(input_file_name);
@@ -36,8 +34,6 @@ void TwoPassAssembler::assemble(string input_file_name, string output_file_name)
 }
 
 void TwoPassAssembler::first_pass() {
-    cout << "First pass...\n";
-
     shared_ptr<Instruction> instruction;
     while (true) {
         // Parser by definition returns correct instruction (syntax-wise), throws error otherwise
@@ -86,8 +82,6 @@ void TwoPassAssembler::first_pass() {
         vector<byte>& machine_code_for_section = section->get_machine_code();
         machine_code_for_section.resize(section->get_location_counter());
     }
-
-    cout << "First pass done. Symbol table created.\n\n";
 }
 
 void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> directive) {
@@ -272,16 +266,12 @@ void TwoPassAssembler::process_command_first_pass(shared_ptr<Instruction> comman
 }
 
 void TwoPassAssembler::second_pass() {
-    cout << "Second pass...\n";
-
     for (auto& section : sections) {
         current_section = section;
         current_section->reset_location_counter();
         generate_machine_code_section(current_section);
         current_section->set_machine_code_ready(true);
     }
-
-    cout << "Second pass done. Generated machine code for each section.\n\n";
 }
 
 void TwoPassAssembler::generate_machine_code_section(shared_ptr<Section> section) {
