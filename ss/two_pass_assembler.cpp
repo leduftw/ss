@@ -241,7 +241,7 @@ void TwoPassAssembler::process_directive_first_pass(shared_ptr<Instruction> dire
 void TwoPassAssembler::process_label_first_pass(shared_ptr<Instruction> instruction) {
     // Label must be in section
     if (!current_section && instruction->has_label()) {
-        throw SyntaxError("Syntax error at line " + to_string(instruction->get_line()) + ": Label must be placed inside a section.");
+        throw SemanticError("Semantic error at line " + to_string(instruction->get_line()) + ": Label must be placed inside a section.");
     }
 
     for (string& label : instruction->get_labels()) {
