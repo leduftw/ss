@@ -87,16 +87,8 @@ class TwoPassAssembler : public Assembler {
 
 protected:
 
-    /*
-        First pass builds the symbol table and report syntax errors, if any.
-    */
     virtual void first_pass();
-
-    /*
-        Second pass generates machine code.
-    */
     virtual void second_pass();
-
     virtual void create_obj_file();
 
 public:
