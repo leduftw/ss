@@ -52,10 +52,8 @@ void TwoPassAssembler::first_pass() {
         // All commands are saved, but only word and skip directives are saved since 
         // only they generate code. All other directives are not saved in instruction buffer.
         if (instruction->is_command() || (instruction->is_directive() &&
-            (instruction->get_directive_name() == "word" || instruction->get_directive_name() == "skip")
-            )
+            (instruction->get_directive_name() == "word" || instruction->get_directive_name() == "skip"))
             ) {
-
             current_section->get_instructions().push_back(instruction);
             instruction->set_section(current_section);
         }
